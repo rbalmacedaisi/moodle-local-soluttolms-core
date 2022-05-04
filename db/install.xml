@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/student_core/db" VERSION="20211210" COMMENT="XMLDB file for Moodle local/student_core"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <TABLE NAME="local_student_core" COMMENT="Default comment for local_student_core, please edit me">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+    <TABLE NAME="student_course_payments" COMMENT="Here is the information about the course payments">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="Course ID related to the payment"/>
+        <FIELD NAME="course_status" TYPE="char" LENGTH="32" NOTNULL="false" SEQUENCE="false" COMMENT="active or inactive"/>
+        <FIELD NAME="payment_status_id" TYPE="int" LENGTH="5" NOTNULL="false" SEQUENCE="false" COMMENT="ID related to the payment status"/>
+        <FIELD NAME="payment_status_str" TYPE="char" LENGTH="64" NOTNULL="false" SEQUENCE="false" COMMENT="String related to the payment status (Approve, pending, decline, etc..)"/>
+        <FIELD NAME="unique_ref" TYPE="char" LENGTH="254" NOTNULL="false" SEQUENCE="false" COMMENT="This must be a unique ref string like 'coursename-timestamp'"/>
+        <FIELD NAME="caregiver_id" TYPE="char" LENGTH="64" NOTNULL="false" SEQUENCE="false" COMMENT="Related to the custom field of user that is the caregiver"/>
+        <FIELD NAME="payment_timestamp" TYPE="int" LENGTH="12" NOTNULL="false" SEQUENCE="false" COMMENT="Timestamp date of the payment"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+    </TABLE>
+  </TABLES>
+</XMLDB>
