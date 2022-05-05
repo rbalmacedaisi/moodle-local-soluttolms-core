@@ -24,6 +24,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = "local_soluttolms_core";
-$plugin->version =  2022041900;
+$plugin->version =  2022050500;
 $plugin->requires = 2014051200;
 $plugin->maturity = MATURITY_STABLE;
