@@ -42,14 +42,23 @@ $functions = array(
         "ajax"        => true,
         'loginrequired' => false,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-    ),/*
-    'local_soluttolms_core_get_user_filed' => array(
-        'classname'   => 'local_soluttolms_core_external',
-        'methodname'  => 'get_user_filed',
-        'classpath'   => 'local/soluttolms_core/externallib.php',
-        'description' => 'Get Theme settings',
+    ),
+    'local_soluttolms_core_get_timededication' => array(
+        'classname'   => 'local_soluttolms_core\external\get_timededication',
+        'methodname'  => 'execute',
+        'description' => 'Get the dedication time for a given user.',
         'type'        => 'read',
         "ajax"        => true,
+        'loginrequired' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
-    ),*/
+    ),
+    'local_soluttolms_core_get_messages' => array(
+        'classname' => 'local_soluttolms_core\external\get_messages',
+        'methodname' => 'execute',
+        'description' => 'Return messages by user logged',
+        'type' => 'read',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
 );
