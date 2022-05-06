@@ -24,6 +24,7 @@
 
 namespace local_soluttolms_core\external;
 
+use context_system;
 use core_component;
 use external_api;
 use external_description;
@@ -77,7 +78,7 @@ class get_theme_settings extends external_api
         ]);
 
         // Declare global variables.
-        global $DB;
+        global $DB, $CFG;
 
         // Get the list of installed themes.
         $themes = core_component::get_plugin_list('theme');
@@ -91,6 +92,119 @@ class get_theme_settings extends external_api
         // Let's get the theme settings.
         $theme = theme_config::load($themename);
         $themeobj = $theme->settings;
+
+        // If themeobj has the loginbackgroundimage property, we need to get the file basename.
+        if (isset($themeobj->loginbackgroundimage) && !empty($themeobj->loginbackgroundimage)) {
+            $themeobj->loginbackgroundimage = basename($themeobj->loginbackgroundimage);
+
+            // Add the static URL to the background image.
+            $themeobj->loginbackgroundimageurl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->loginbackgroundimage);
+        }
+
+        /***************************************************/
+        // Let's do the same for the favicon image.
+        /***************************************************/
+
+        // If themeobj has the favicon property, we need to get the file basename.
+        if (isset($themeobj->favicon) && !empty($themeobj->favicon)) {
+            $themeobj->favicon = basename($themeobj->favicon);
+
+            // Add the static URL to the favicon image.
+            $themeobj->faviconurl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->favicon);
+        }
+
+        /*****************************************************************/
+        // Let's do the same process for the core_admin logo image.
+        /*****************************************************************/
+
+        $logo = get_config('core_admin', 'logo');
+
+        // If core_adminlogo is not empty, we need to generate the static image.
+        if (!empty($logo)) {
+
+            // Getting the file record core_adminlogo.
+            $filerecord = $DB->get_record('files', [
+                'filename' => basename($logo),
+                'component' => 'core_admin',
+                'filearea' => 'logo',
+                'contextid' => context_system::instance()->id,
+                'filepath' => '/',
+            ]);
+
+            // If we have a file record, we can generate the static image.
+            if (isset($filerecord->id)) {
+
+                // Load file storage from file record.
+                $fs = get_file_storage();
+
+                // Loading the core_admin logo image.
+                $file = $fs->get_file_by_id($filerecord->id);
+
+                // Let's see if the file exists in the static folder.
+                $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
+
+                // If the file doesn't exist, we need to generate it.
+                if (!file_exists($filepath)) {
+
+                    // Save the file in the pix folder.
+                    $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
+                }
+
+                // Return the url of the logo.
+                $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
+            }
+        }
+
+        /*****************************************************************
+         * Let's do the same process for the core_admin logocompact image.
+         * 
+         * IMPORTANT: This image will be used as the "light" version
+         * of the main logo.
+         *****************************************************************/
+
+        $logocompact = get_config('core_admin', 'logocompact');
+
+        // If core_adminlogocompact is not empty, we need to generate the static image.
+        if (!empty($logocompact)) {
+
+            // Getting the file record core_adminlogocompact.
+            $filerecord = $DB->get_record('files', [
+                'filename' => basename($logocompact),
+                'component' => 'core_admin',
+                'filearea' => 'logocompact',
+                'contextid' => context_system::instance()->id,
+                'filepath' => '/',
+            ]);
+
+            // If we have a file record, we can generate the static image.
+            if (isset($filerecord->id)) {
+
+                // Load file storage from file record.
+                $fs = get_file_storage();
+
+                // Loading the core_admin logo image.
+                $file = $fs->get_file_by_id($filerecord->id);
+
+                // Let's see if the file exists in the static folder.
+                $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
+
+                // If the file doesn't exist, we need to generate it.
+                if (!file_exists($filepath)) {
+
+                    // Save the file in the pix folder.
+                    $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
+                }
+
+                // Return the url of the logo.
+                $themeobj->logocompact = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
+            }
+        }
+
+        // Adding the name of the site to the theme settings.
+        $themeobj->sitename = $SITE->fullname;
+
+        // Adding a Solutto Copyright to the theme settings.
+        $themeobj->soluttocopyright = 'Solutto Consulting LLC. © ' . date('Y');
 
         return ['themeobject' => json_encode($themeobj)];
     }
