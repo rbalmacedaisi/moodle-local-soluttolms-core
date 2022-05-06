@@ -24,6 +24,7 @@
 
 namespace local_soluttolms_core\external;
 
+use external_api;
 use external_description;
 use external_function_parameters;
 use external_multiple_structure;
