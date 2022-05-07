@@ -22,8 +22,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use core_user;
-
 defined('MOODLE_INTERNAL') || die();
 
 function get_messages_from_user_conversations($userid, $limitfrom, $limitnum)
