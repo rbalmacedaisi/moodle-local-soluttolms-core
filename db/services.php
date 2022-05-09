@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$functions = array(    
+$functions = array(
     'local_soluttolms_core_getcourses_by_token' => array(
         'classname' => 'local_soluttolms_core\external\getcourses_by_token',
         'methodname' => 'execute',
@@ -35,20 +35,20 @@ $functions = array(
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'local_soluttolms_core_get_theme_settings' => array(
-        'classname'   => 'local_soluttolms_core\external\get_theme_settings',
-        'methodname'  => 'execute',
+        'classname' => 'local_soluttolms_core\external\get_theme_settings',
+        'methodname' => 'execute',
         'description' => 'Get Theme settings',
-        'type'        => 'read',
-        "ajax"        => true,
+        'type' => 'read',
+        "ajax" => true,
         'loginrequired' => false,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
     'local_soluttolms_core_get_timededication' => array(
-        'classname'   => 'local_soluttolms_core\external\get_timededication',
-        'methodname'  => 'execute',
+        'classname' => 'local_soluttolms_core\external\get_timededication',
+        'methodname' => 'execute',
         'description' => 'Get the dedication time for a given user.',
-        'type'        => 'read',
-        "ajax"        => true,
+        'type' => 'read',
+        "ajax" => true,
         'loginrequired' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
