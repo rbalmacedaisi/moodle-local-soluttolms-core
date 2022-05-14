@@ -206,6 +206,30 @@ class get_theme_settings extends external_api
         // Adding a Solutto Copyright to the theme settings.
         $themeobj->soluttocopyright = 'Solutto Consulting LLC. © ' . date('Y');
 
+        /***************************************************/
+        // Let's do the same for the logo image.
+        /***************************************************/
+
+        // If themeobj has the logo property, we need to get the file basename.
+        if (isset($themeobj->logo) && !empty($themeobj->logo)) {
+            $themeobj->logo = basename($themeobj->logo);
+
+            // Add the static URL to the logo image.
+            $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->logo);
+        }
+
+        /***************************************************/
+        // Let's do the same for the logodark image.
+        /***************************************************/
+
+        // If themeobj has the logodark property, we need to get the file basename.
+        if (isset($themeobj->logodark) && !empty($themeobj->logodark)) {
+            $themeobj->logodark = basename($themeobj->logodark);
+
+            // Add the static URL to the logodark image.
+            $themeobj->logodarkurl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->logodark);
+        }
+
         return ['themeobject' => json_encode($themeobj)];
     }
 
