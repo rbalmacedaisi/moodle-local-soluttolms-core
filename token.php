@@ -110,6 +110,30 @@ if (!empty($user)) {
         $usertoken->privatetoken = null;
     }
 
+    // Let's see if the current user has any of the folloing roles:
+    // - Teacher.
+    // - Manager.
+    // - Non-editing teacher.
+    // - Course creator.
+
+    $ismanager = false;
+
+    $sql = "SELECT r.shortname
+              FROM {role_assignments} ra, {role} r
+             WHERE ra.userid = ? AND ra.roleid = r.id
+                    AND r.shortname IN ('teacher', 'manager', 'editingteacher', 'coursecreator')";
+
+    $userroles = $DB->get_records_sql($sql , array($user->id));
+    
+    if(!empty($userroles)){
+        $ismanager = true;
+    }
+
+    // If the current user is a site administrator.
+    if (is_siteadmin($user->id)) {
+        $ismanager = true;
+    }
+
     // Let's create a return object with the needed information.
     $returns = array();
     $returns['username'] = $user->username;
@@ -119,6 +143,7 @@ if (!empty($user)) {
     $returns['email'] = $user->email;
     $returns['userid'] = $user->id;
     $returns['usertoken'] = $usertoken;
+    $returns['manager'] = $ismanager;
     echo json_encode($returns);
 } else {
     throw new moodle_exception('invalidlogin');

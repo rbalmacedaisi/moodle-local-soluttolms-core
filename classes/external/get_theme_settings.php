@@ -215,7 +215,7 @@ class get_theme_settings extends external_api
             $themeobj->logo = basename($themeobj->logo);
 
             // Add the static URL to the logo image.
-            $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->logo);
+            $themeobj->logodefaulturl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->logo);
         }
 
         /***************************************************/
