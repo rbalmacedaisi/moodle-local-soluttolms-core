@@ -78,51 +78,27 @@ class getcourses_by_token extends external_api {
 
         //Get Courses enrol by user logged
         $mycourses = enrol_get_users_courses($userid);
-
         $coursecontent = [];
-        $categoryname = [];
-        $content = [];
-        $istotal = [];
+        $categorycontent = [];
         if (!empty($mycourses)) {
-            foreach ($mycourses as $key => $mc) {
-
-                //Get Categories and subcat
-                $categories = $DB->get_record('course_categories', array('id' => $mc->category));
-
-                $path = explode("/", $categories->path);
-                $categoryparent = $DB->get_record('course_categories', array('id' => $path[1]));
-
-                $categoryname['id'] = $categoryparent->id;
-                $categoryname['namecategory'] = $categoryparent->name;
-                $categoryname['urlcategory'] = $CFG->wwwroot . 'course/index.php?categoryid=' . $categoryparent->id . '';
-
-                //Get Progress Course
-                $objcourse = get_course($mc->id);
-
-                $progress = \core_completion\progress::get_course_progress_percentage($objcourse, $userid);
-
-                if ($progress == null) {
-                    $progress = 0;
-                }
-
-                $istotal[] = round($progress);
-
+            foreach ($mycourses as $key => $mc) { 
                 $coursecontent['id'] = $mc->id;
                 $coursecontent['fullname'] = $mc->fullname;
                 $coursecontent['shortname'] = $mc->shortname;
                 $coursecontent['progress'] = round($progress);
                 $coursecontent['urlcourse'] = $CFG->wwwroot . '/course/view.php?id=' . $mc->id . '';
-
-                $categoryname['courses'][] = $coursecontent;
+                
+                $categories = $DB->get_record('course_categories', array('id' => $mc->category));
+                
+                $categorycontent[$categories->id]['namecategory'] = $categories->name;
+                $categorycontent[$categories->id]['urlcategory'] = $CFG->wwwroot . 'course/index.php?categoryid=' . $categories->id . '';
+                $categorycontent[$categories->id]['courses'][] = $coursecontent;
             }
-
-            $categoryname['categoryprogress'] = array_sum($istotal);
-            $content[$key] = $categoryname;
         } else {
-            $categoryname = [];
+            $categorycontent = [];
         }
 
-        return $content;
+        return ['categoryobj' => json_encode(array_values($categorycontent))];
     }
 
     /**
@@ -132,27 +108,12 @@ class getcourses_by_token extends external_api {
      */
     public static function execute_returns(): external_description
     {
-        return new external_multiple_structure(
-            new external_single_structure(
-                array(
-                    'id' => new external_value(PARAM_INT, 'ID Category'),
-                    'namecategory' => new external_value(PARAM_RAW, 'Name Category'),
-                    'urlcategory' => new external_value(PARAM_RAW, 'Url Category'),
-                    'categoryprogress' => new external_value(PARAM_RAW, 'Progress category'),
-                    'courses' => new external_multiple_structure(
-                        new external_single_structure(
-                            array(
-                                'id' => new external_value(PARAM_INT, 'ID Course'),
-                                'fullname' => new external_value(PARAM_RAW, 'Course Fullname'),
-                                'shortname' => new external_value(PARAM_RAW, 'Course Shortname'),
-                                'progress' => new external_value(PARAM_RAW, 'Course Progress'),
-                                'urlcourse' => new external_value(PARAM_RAW, 'Url course'),
-                            )
-                        )
-                    ),
-                )
+        return new external_single_structure(
+            array(
+                'categoryobj' => new external_value(PARAM_RAW, ''),
             )
         );
+        
     }
 
 }
