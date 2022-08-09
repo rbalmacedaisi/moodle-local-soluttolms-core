@@ -96,7 +96,7 @@ class get_theme_settings extends external_api
         // If themeobj has the loginbackgroundimage property, we need to get the file basename.
         if (isset($themeobj->loginbackgroundimage) && !empty($themeobj->loginbackgroundimage)) {
             // Let's do an extra check to see if the file exists.
-            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->loginbackgroundimage))) {
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->loginbackgroundimage))) {
                 // Let's generate the file again.
                 require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
                 
@@ -119,7 +119,7 @@ class get_theme_settings extends external_api
         // If themeobj has the favicon property, we need to get the file basename.
         if (isset($themeobj->favicon) && !empty($themeobj->favicon)) {
             // Let's do an extra check to see if the file exists.
-            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->favicon))) {
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->favicon))) {
                 // Let's generate the file again.
                 require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
                 
@@ -144,7 +144,7 @@ class get_theme_settings extends external_api
         // If core_adminlogo is not empty, we need to generate the static image.
         if (!empty($logo)) {
             // Let's do an extra check to see if the file exists.
-            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($logo))){
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($logo))){
                 // Getting the file record core_adminlogo.
                 $filerecord = $DB->get_record('files', [
                     'filename' => basename($logo),
@@ -164,7 +164,7 @@ class get_theme_settings extends external_api
                     $file = $fs->get_file_by_id($filerecord->id);
 
                     // Let's see if the file exists in the static folder.
-                    $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
+                    $filepath = $CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
 
                     // If the file doesn't exist, we need to generate it.
                     if (!file_exists($filepath)) {
@@ -194,7 +194,7 @@ class get_theme_settings extends external_api
         // If core_adminlogocompact is not empty, we need to generate the static image.
         if (!empty($logocompact)) {
             // Let's do an extra check to see if the file exists.
-            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($lologocompactgo))){
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($lologocompactgo))){
 
                 // Getting the file record core_adminlogocompact.
                 $filerecord = $DB->get_record('files', [
@@ -215,7 +215,7 @@ class get_theme_settings extends external_api
                     $file = $fs->get_file_by_id($filerecord->id);
 
                     // Let's see if the file exists in the static folder.
-                    $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
+                    $filepath = $CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
 
                     // If the file doesn't exist, we need to generate it.
                     if (!file_exists($filepath)) {
@@ -245,6 +245,17 @@ class get_theme_settings extends external_api
 
         // If themeobj has the logo property, we need to get the file basename.
         if (isset($themeobj->logo) && !empty($themeobj->logo)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->logo))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+                
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->logo = basename($themeobj->logo);
 
             // Add the static URL to the logo image.
@@ -257,6 +268,17 @@ class get_theme_settings extends external_api
 
         // If themeobj has the logodark property, we need to get the file basename.
         if (isset($themeobj->logodark) && !empty($themeobj->logodark)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->logodark))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+                
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->logodark = basename($themeobj->logodark);
 
             // Add the static URL to the logodark image.
