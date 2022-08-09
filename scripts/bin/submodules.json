@@ -1,0 +1,74 @@
+{
+    "submodules": [
+        {
+            "path": "blocks/solutto_courserating",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "blocks/solutto_courserecomm",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "mod/audvid",
+            "remote": "origin",
+            "branch": "master"
+        },
+        {
+            "path": "blocks/last_activity",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "local/moodleoptimizer",
+            "remote": "origin",
+            "branch": "master"
+        },
+        {
+            "path": "theme/soluttolms",
+            "remote": "origin",
+            "branch": "master"
+        },
+        {
+            "path": "local/soluttolms_core",
+            "remote": "origin",
+            "branch": "master"
+        },
+        {
+            "path": "theme/soluttolmsadmin",
+            "remote": "origin",
+            "branch": "master"
+        },
+        {
+            "path": "mod/slmediaprogress",
+            "remote": "origin",
+            "branch": "master"
+        },
+        {
+            "path": "local/sltimetracking",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "blocks/sltimetracking",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "availability/condition/sltimetracking",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "local/sc_learningplans",
+            "remote": "origin",
+            "branch": "main"
+        },
+        {
+            "path": "blocks/sc_learningplans",
+            "remote": "origin",
+            "branch": "main"
+        }
+    ]
+}
