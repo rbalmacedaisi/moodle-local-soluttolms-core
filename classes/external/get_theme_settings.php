@@ -95,6 +95,17 @@ class get_theme_settings extends external_api
 
         // If themeobj has the loginbackgroundimage property, we need to get the file basename.
         if (isset($themeobj->loginbackgroundimage) && !empty($themeobj->loginbackgroundimage)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->loginbackgroundimage))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+                
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->loginbackgroundimage = basename($themeobj->loginbackgroundimage);
 
             // Add the static URL to the background image.
@@ -107,6 +118,17 @@ class get_theme_settings extends external_api
 
         // If themeobj has the favicon property, we need to get the file basename.
         if (isset($themeobj->favicon) && !empty($themeobj->favicon)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->favicon))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+                
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+            
             $themeobj->favicon = basename($themeobj->favicon);
 
             // Add the static URL to the favicon image.
@@ -121,37 +143,42 @@ class get_theme_settings extends external_api
 
         // If core_adminlogo is not empty, we need to generate the static image.
         if (!empty($logo)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($logo))){
+                // Getting the file record core_adminlogo.
+                $filerecord = $DB->get_record('files', [
+                    'filename' => basename($logo),
+                    'component' => 'core_admin',
+                    'filearea' => 'logo',
+                    'contextid' => context_system::instance()->id,
+                    'filepath' => '/',
+                ]);
 
-            // Getting the file record core_adminlogo.
-            $filerecord = $DB->get_record('files', [
-                'filename' => basename($logo),
-                'component' => 'core_admin',
-                'filearea' => 'logo',
-                'contextid' => context_system::instance()->id,
-                'filepath' => '/',
-            ]);
+                // If we have a file record, we can generate the static image.
+                if (isset($filerecord->id)) {
 
-            // If we have a file record, we can generate the static image.
-            if (isset($filerecord->id)) {
+                    // Load file storage from file record.
+                    $fs = get_file_storage();
 
-                // Load file storage from file record.
-                $fs = get_file_storage();
+                    // Loading the core_admin logo image.
+                    $file = $fs->get_file_by_id($filerecord->id);
 
-                // Loading the core_admin logo image.
-                $file = $fs->get_file_by_id($filerecord->id);
+                    // Let's see if the file exists in the static folder.
+                    $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
 
-                // Let's see if the file exists in the static folder.
-                $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
+                    // If the file doesn't exist, we need to generate it.
+                    if (!file_exists($filepath)) {
 
-                // If the file doesn't exist, we need to generate it.
-                if (!file_exists($filepath)) {
+                        // Save the file in the pix folder.
+                        $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
+                    }
 
-                    // Save the file in the pix folder.
-                    $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
+                    // Return the url of the logo.
+                    $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
                 }
-
+            } else {
                 // Return the url of the logo.
-                $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
+                $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($logo);
             }
         }
 
@@ -166,37 +193,43 @@ class get_theme_settings extends external_api
 
         // If core_adminlogocompact is not empty, we need to generate the static image.
         if (!empty($logocompact)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($lologocompactgo))){
 
-            // Getting the file record core_adminlogocompact.
-            $filerecord = $DB->get_record('files', [
-                'filename' => basename($logocompact),
-                'component' => 'core_admin',
-                'filearea' => 'logocompact',
-                'contextid' => context_system::instance()->id,
-                'filepath' => '/',
-            ]);
+                // Getting the file record core_adminlogocompact.
+                $filerecord = $DB->get_record('files', [
+                    'filename' => basename($logocompact),
+                    'component' => 'core_admin',
+                    'filearea' => 'logocompact',
+                    'contextid' => context_system::instance()->id,
+                    'filepath' => '/',
+                ]);
 
-            // If we have a file record, we can generate the static image.
-            if (isset($filerecord->id)) {
+                // If we have a file record, we can generate the static image.
+                if (isset($filerecord->id)) {
 
-                // Load file storage from file record.
-                $fs = get_file_storage();
+                    // Load file storage from file record.
+                    $fs = get_file_storage();
 
-                // Loading the core_admin logo image.
-                $file = $fs->get_file_by_id($filerecord->id);
+                    // Loading the core_admin logo image.
+                    $file = $fs->get_file_by_id($filerecord->id);
 
-                // Let's see if the file exists in the static folder.
-                $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
+                    // Let's see if the file exists in the static folder.
+                    $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
 
-                // If the file doesn't exist, we need to generate it.
-                if (!file_exists($filepath)) {
+                    // If the file doesn't exist, we need to generate it.
+                    if (!file_exists($filepath)) {
 
-                    // Save the file in the pix folder.
-                    $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
+                        // Save the file in the pix folder.
+                        $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
+                    }
+
+                    // Return the url of the logo.
+                    $themeobj->logocompact = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
                 }
-
+            } else {
                 // Return the url of the logo.
-                $themeobj->logocompact = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
+                $themeobj->logocompact = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($logocompact);
             }
         }
 
