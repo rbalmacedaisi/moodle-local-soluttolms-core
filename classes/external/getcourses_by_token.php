@@ -78,6 +78,8 @@ class getcourses_by_token extends external_api {
 
         //Get Courses enrol by user logged
         $mycourses = enrol_get_users_courses($userid);
+        $coursecompleted = 0;
+        $countcourses = 0;
         $coursecontent = [];
         $categorycontent = [];
         if (!empty($mycourses)) {
@@ -85,7 +87,15 @@ class getcourses_by_token extends external_api {
                 $coursecontent['id'] = $mc->id;
                 $coursecontent['fullname'] = $mc->fullname;
                 $coursecontent['shortname'] = $mc->shortname;
+                $objcourse = get_course($mc->id);
+                $progress = \core_completion\progress::get_course_progress_percentage($objcourse, $userid);
+                if ($progress == NULL) {
+                    $progress = 0;
+                }
                 $coursecontent['progress'] = round($progress);
+                if($progress == 100){
+                    $coursecompleted++;
+                }
                 $coursecontent['urlcourse'] = $CFG->wwwroot . '/course/view.php?id=' . $mc->id . '';
                 
                 $categories = $DB->get_record('course_categories', array('id' => $mc->category));
@@ -93,11 +103,12 @@ class getcourses_by_token extends external_api {
                 $categorycontent[$categories->id]['namecategory'] = $categories->name;
                 $categorycontent[$categories->id]['urlcategory'] = $CFG->wwwroot . 'course/index.php?categoryid=' . $categories->id . '';
                 $categorycontent[$categories->id]['courses'][] = $coursecontent;
+            
             }
         } else {
             $categorycontent = [];
         }
-
+        
         return ['categoryobj' => json_encode(array_values($categorycontent))];
     }
 
