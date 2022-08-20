@@ -1,1 +1,3 @@
 cli/backup
+scripts/bin/sites.json
+scripts/bin/*.log

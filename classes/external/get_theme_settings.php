@@ -45,16 +45,14 @@ require_once $CFG->libdir . '/externallib.php';
  * @copyright   2022 Solutto Consulting <devs@soluttoconsulting.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class get_theme_settings extends external_api
-{
+class get_theme_settings extends external_api {
 
     /**
      * Describes parameters of the {@see self::execute()} method.
      *
      * @return external_function_parameters
      */
-    public static function execute_parameters(): external_function_parameters
-    {
+    public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters(
             [
                 'themename' => new external_value(PARAM_TEXT, 'The name of the theme from where we want to get the settings'),
@@ -68,8 +66,7 @@ class get_theme_settings extends external_api
      * @param int $userid
      * @return mixed TODO document
      */
-    public static function execute(string $themename)
-    {
+    public static function execute(string $themename) {
         // Re-validate parameter.
         [
             'themename' => $themename,
@@ -95,6 +92,19 @@ class get_theme_settings extends external_api
 
         // If themeobj has the loginbackgroundimage property, we need to get the file basename.
         if (isset($themeobj->loginbackgroundimage) && !empty($themeobj->loginbackgroundimage)) {
+            // Let's do an extra check to see if the file exists.
+
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->loginbackgroundimage))) {
+                error_log("\nNo existe el archivo.", 3, '/var/www/moodledata/glog.json');
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->loginbackgroundimage = basename($themeobj->loginbackgroundimage);
 
             // Add the static URL to the background image.
@@ -107,97 +117,21 @@ class get_theme_settings extends external_api
 
         // If themeobj has the favicon property, we need to get the file basename.
         if (isset($themeobj->favicon) && !empty($themeobj->favicon)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->favicon))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->favicon = basename($themeobj->favicon);
 
             // Add the static URL to the favicon image.
             $themeobj->faviconurl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($themeobj->favicon);
-        }
-
-        /*****************************************************************/
-        // Let's do the same process for the core_admin logo image.
-        /*****************************************************************/
-
-        $logo = get_config('core_admin', 'logo');
-
-        // If core_adminlogo is not empty, we need to generate the static image.
-        if (!empty($logo)) {
-
-            // Getting the file record core_adminlogo.
-            $filerecord = $DB->get_record('files', [
-                'filename' => basename($logo),
-                'component' => 'core_admin',
-                'filearea' => 'logo',
-                'contextid' => context_system::instance()->id,
-                'filepath' => '/',
-            ]);
-
-            // If we have a file record, we can generate the static image.
-            if (isset($filerecord->id)) {
-
-                // Load file storage from file record.
-                $fs = get_file_storage();
-
-                // Loading the core_admin logo image.
-                $file = $fs->get_file_by_id($filerecord->id);
-
-                // Let's see if the file exists in the static folder.
-                $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
-
-                // If the file doesn't exist, we need to generate it.
-                if (!file_exists($filepath)) {
-
-                    // Save the file in the pix folder.
-                    $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
-                }
-
-                // Return the url of the logo.
-                $themeobj->logourl = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
-            }
-        }
-
-        /*****************************************************************
-         * Let's do the same process for the core_admin logocompact image.
-         * 
-         * IMPORTANT: This image will be used as the "light" version
-         * of the main logo.
-         *****************************************************************/
-
-        $logocompact = get_config('core_admin', 'logocompact');
-
-        // If core_adminlogocompact is not empty, we need to generate the static image.
-        if (!empty($logocompact)) {
-
-            // Getting the file record core_adminlogocompact.
-            $filerecord = $DB->get_record('files', [
-                'filename' => basename($logocompact),
-                'component' => 'core_admin',
-                'filearea' => 'logocompact',
-                'contextid' => context_system::instance()->id,
-                'filepath' => '/',
-            ]);
-
-            // If we have a file record, we can generate the static image.
-            if (isset($filerecord->id)) {
-
-                // Load file storage from file record.
-                $fs = get_file_storage();
-
-                // Loading the core_admin logo image.
-                $file = $fs->get_file_by_id($filerecord->id);
-
-                // Let's see if the file exists in the static folder.
-                $filepath = $CFG->dataroot . '/theme/' . $themename . '/pix/static/' . basename($logo);
-
-                // If the file doesn't exist, we need to generate it.
-                if (!file_exists($filepath)) {
-
-                    // Save the file in the pix folder.
-                    $file->copy_content_to($CFG->dirroot . '/theme/soluttolmsadmin/pix/static/' . $filerecord->filename);
-                }
-
-                // Return the url of the logo.
-                $themeobj->logocompact = $CFG->wwwroot . '/theme/' . $themename . '/pix/static/' . rawurlencode($filerecord->filename);
-            }
         }
 
         // Adding the name of the site to the theme settings.
@@ -212,6 +146,17 @@ class get_theme_settings extends external_api
 
         // If themeobj has the logo property, we need to get the file basename.
         if (isset($themeobj->logo) && !empty($themeobj->logo)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->logo))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->logo = basename($themeobj->logo);
 
             // Add the static URL to the logo image.
@@ -224,6 +169,17 @@ class get_theme_settings extends external_api
 
         // If themeobj has the logodark property, we need to get the file basename.
         if (isset($themeobj->logodark) && !empty($themeobj->logodark)) {
+            // Let's do an extra check to see if the file exists.
+            if (!file_exists($CFG->dirroot . '/theme/' . $themename . '/pix/static/' . basename($themeobj->logodark))) {
+                // Let's generate the file again.
+                require_once($CFG->dirroot . '/theme/' . $themename . '/lib.php');
+
+                // Execute the generate_static_images only if it exists.
+                if (function_exists('generate_static_images')) {
+                    generate_static_images();
+                }
+            }
+
             $themeobj->logodark = basename($themeobj->logodark);
 
             // Add the static URL to the logodark image.
@@ -238,8 +194,7 @@ class get_theme_settings extends external_api
      *
      * @return external_description
      */
-    public static function execute_returns(): external_description
-    {
+    public static function execute_returns(): external_description {
         return new external_single_structure(
             array(
                 'themeobject' => new external_value(PARAM_RAW, 'A JSON string representation of the object containing the settings for the selected theme.'),
