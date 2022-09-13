@@ -100,3 +100,22 @@ function core_get_course_image($courseid)
    }
    return $url;
 }
+
+/**
+ * Get course Info fields
+ * Param int courseid
+ **/
+function get_course_metadata($courseid) {
+    $handler = \core_customfield\handler::get_handler('core_course', 'course');
+    $datas = $handler->get_instance_data($courseid);
+    $metadata = [];
+    foreach ($datas as $data) {
+        if (empty($data->get_value())) {
+            continue;
+        }
+        $cat = $data->get_field()->get('shortname');
+        $metadata[$data->get_field()->get('shortname')]['name'] = $cat;
+        $metadata[$data->get_field()->get('shortname')]['value'] = strip_tags($data->get_value());
+    }
+    return $metadata;
+}
