@@ -124,7 +124,9 @@ class get_data_by_courses extends external_api {
                                         JOIN {role} r ON (r.id = ra.roleid)
                                         WHERE c.instanceid = :courseid AND ra.roleid = 1 OR ra.roleid = 3',
                                         array('courseid' => $courseid));
+                                        
         foreach($teachers as $teach){
+            
             if($teach->shortname == 'manager'){
                 $managers[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
                 $managers[$teach->userid]['email'] = $teach->email;
@@ -132,6 +134,7 @@ class get_data_by_courses extends external_api {
                 $userpicture = new user_picture($user_object);
                 $url = $userpicture->get_url($PAGE)->out(false);
                 $managers[$teach->userid]['image'] = $url;
+                $managers[$teach->userid]['shortname'] = $teach->shortname;
             }else{
                 $teachersdata[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
                 $teachersdata[$teach->userid]['email'] = $teach->email;
@@ -139,6 +142,7 @@ class get_data_by_courses extends external_api {
                 $userpicture = new user_picture($user_object);
                 $url = $userpicture->get_url($PAGE)->out(false);
                 $teachersdata[$teach->userid]['image'] = $url;
+                $teachersdata[$teach->userid]['shortname'] = $teach->shortname;
             }
         }
         $data['managers'] = array_values($managers);
@@ -186,7 +190,19 @@ class get_data_by_courses extends external_api {
                 $badgecomplete[] = ['name' => $bname, 'image' => $imageurl];
         }
         $data['badgescomplete'] = $badgecomplete;
- 
+        
+        //Get progress by user
+        $objcourse = get_course($courseid);
+        $progress = \core_completion\progress::get_course_progress_percentage($objcourse, $userid);
+        if ($progress == NULL) {
+            $progress = 0;
+        }
+        $data['progress'] = round($progress);
+        
+        //Data Custom fields course
+        $fields = get_course_metadata($courseid);
+        $data['customfields'] = array_values($fields);
+        
         return ['coursedata' => json_encode($data)];
     }
 
