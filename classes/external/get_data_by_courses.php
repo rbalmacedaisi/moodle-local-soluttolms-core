@@ -80,10 +80,11 @@ class get_data_by_courses extends external_api {
         $coursedata = $DB->get_record('course', array('id' => $courseid));
         $typeenrol = $DB->get_records('enrol', array('courseid' => $courseid));
         $data['courseinfo'] = $coursedata;
-
+        
         //Check if user is enroll in course
         $context = \context_course::instance($courseid);
         $isenrol = is_enrolled($context, $userid, '', true);
+
         if($isenrol == 1){
             $data['userenrolled'] = 'enrolled';
         }else{
@@ -105,7 +106,7 @@ class get_data_by_courses extends external_api {
         }else{
             $data['courseimage'] = 'notcourseimage';
         }
-        
+
         foreach($typeenrol as $enrol){
             if($enrol->status == 0){
                 $data['type_enrol']['name']  = $enrol->enrol;
@@ -113,47 +114,35 @@ class get_data_by_courses extends external_api {
             }
         }
         
-        $modinfo = \core_course_external::get_course_contents($courseid);
+        $modinfo = get_modules_and_sections($courseid, $userid);
         $data['activities'] = $modinfo; 
         
-        /*
-        $teachers = $DB->get_records_sql('SELECT u.firstname, u.lastname, u.email, u.id AS userid, ra.roleid, c.id, r.shortname, r.name AS roleName
-                                        FROM {user} u 
-                                        JOIN {user_enrolments} ue ON (ue.userid = u.id)
-                                        JOIN {role_assignments} ra ON (ra.userid = u.id)
-                                        JOIN {context} c ON (c.id = ra.contextid)
-                                        JOIN {role} r ON (r.id = ra.roleid)
-                                        WHERE c.instanceid = :courseid AND ra.roleid = 1 OR ra.roleid = 3',
+        $teachers = $DB->get_records_sql("SELECT u.id as userid, u.firstname, u.lastname, u.email, r.shortname  
+                                            FROM {course} c
+                                            JOIN {context} ct ON c.id = ct.instanceid
+                                            JOIN {role_assignments} ra ON ra.contextid = ct.id
+                                            JOIN {user} u ON u.id = ra.userid
+                                            JOIN {role} r ON r.id = ra.roleid
+                                            WHERE c.id = :courseid",
                                         array('courseid' => $courseid));
-                                        
+
         foreach($teachers as $teach){
-            $teachersdata[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
-            $teachersdata[$teach->userid]['email'] = $teach->email;
-            $user_object = \core_user::get_user($teach->userid);
-            $userpicture = new user_picture($user_object);
-            $url = $userpicture->get_url($PAGE)->out(false);
-            $teachersdata[$teach->userid]['image'] = $url;
-            $teachersdata[$teach->userid]['shortname'] = $teach->shortname;
-            $teachersdata[$teach->userid]['roleName'] = $teach->roleName;
+            
+            if($teach->shortname == 'manager' || 
+            $teach->shortname == 'coursecreator' || 
+            $teach->shortname == 'editingteacher' || 
+            $teach->shortname == 'teacher' ){
+                $teachersdata[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
+                $teachersdata[$teach->userid]['email'] = $teach->email;
+                $user_object = \core_user::get_user($teach->userid);
+                $userpicture = new user_picture($user_object);
+                $url = $userpicture->get_url($PAGE)->out(false);
+                $teachersdata[$teach->userid]['image'] = $url;
+                $teachersdata[$teach->userid]['shortname'] = get_string($teach->shortname, 'local_soluttolms_core');
+            }
         }
-
-        $data['teachers'] = array_values($teachersdata);*/
-
-        // Get the list of teachers and managers in this course.
-        $context = \context_course::instance($courseid);
-        $teachers = get_enrolled_users($context, 'moodle/course:update', 0, 'u.*', null, 0, 0, true);
-        $managers = get_enrolled_users($context, 'moodle/category:manage', 0, 'u.*', null, 0, 0, true);
-        $teachers = array_merge($teachers, $managers);
-        $teachers = array_unique($teachers, SORT_REGULAR);
-        $data['teachers'] = $teachers;
-
-        // Get the list of enrollment methods.
-        $enrolinstances = enrol_get_instances($courseid, true);
-        $enrolmethods = [];
-        foreach ($enrolinstances as $instance) {
-            $enrolmethods[] = $instance->enrol;
-        }
-        $data['enrolmethods'] = $enrolmethods;
+        $data['managers'] = array_values($managers);
+        $data['teachers'] = array_values($teachersdata);
         
         $badges = $DB->get_records_sql("SELECT
                 bi.uniquehash,
@@ -205,11 +194,31 @@ class get_data_by_courses extends external_api {
             $progress = 0;
         }
         $data['progress'] = round($progress);
+
+
+        /**********************************************************/
+        // Get the list of enrollment methods.
+        $enrolinstances = enrol_get_instances($courseid, true);
+        $enrolmethods = [];
+        foreach ($enrolinstances as $instance) {
+            $enrolmethods[] = $instance;
+        }
+        $data['enrolmethods'] = $enrolmethods;
+
+        // Get the list of teachers and managers in this course.
+        $context = \context_course::instance($courseid);
+        $teachers = get_enrolled_users($context, 'moodle/course:update', 0, 'u.*', null, 0, 0, true);
+        $managers = get_enrolled_users($context, 'moodle/category:manage', 0, 'u.*', null, 0, 0, true);
+        $teachers = array_merge($teachers, $managers);
+        $teachers = array_unique($teachers, SORT_REGULAR);
+        $data['teachers2'] = $teachers;
+
+        /**********************************************************/
         
         //Data Custom fields course
         $fields = get_course_metadata($courseid);
         $data['customfields'] = array_values($fields);
-        
+
         return ['coursedata' => json_encode($data)];
     }
 
