@@ -32,7 +32,7 @@ require_once($CFG->libdir . '/clilib.php');
 require_once($CFG->dirroot . '/local/soluttolms_core/lib/aws/aws-autoloader.php');
 
 // Including dumper class.
-require_once($CFG->dirroot . '/local/soluttolms_core/lib/db_dump/dumper.php');
+require_once($CFG->dirroot . '/local/soluttolms_core/lib/dbdump/dumper.php');
 
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
