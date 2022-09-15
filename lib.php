@@ -121,7 +121,7 @@ function get_course_metadata($courseid) {
 
 
 function get_modules_and_sections($courseid, $userid){
-    global $PAGE;
+    global $PAGE, $CFG;
     
     $context = context_course::instance($courseid, IGNORE_MISSING);
     $course = get_course($courseid);
