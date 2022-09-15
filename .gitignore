@@ -1,3 +1,4 @@
 cli/backup
+cli/restore
 scripts/bin/sites.json
 scripts/bin/*.log
