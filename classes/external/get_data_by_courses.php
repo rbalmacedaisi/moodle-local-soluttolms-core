@@ -80,7 +80,7 @@ class get_data_by_courses extends external_api {
         $coursedata = $DB->get_record('course', array('id' => $courseid));
         $typeenrol = $DB->get_records('enrol', array('courseid' => $courseid));
         $data['courseinfo'] = $coursedata;
-        
+
         //Check if user is enroll in course
         $context = \context_course::instance($courseid);
         $isenrol = is_enrolled($context, $userid, '', true);
@@ -116,7 +116,8 @@ class get_data_by_courses extends external_api {
         $modinfo = \core_course_external::get_course_contents($courseid);
         $data['activities'] = $modinfo; 
         
-        $teachers = $DB->get_records_sql('SELECT u.firstname, u.lastname, u.email, u.id AS userid, ra.roleid, c.id, r.shortname
+        /*
+        $teachers = $DB->get_records_sql('SELECT u.firstname, u.lastname, u.email, u.id AS userid, ra.roleid, c.id, r.shortname, r.name AS roleName
                                         FROM {user} u 
                                         JOIN {user_enrolments} ue ON (ue.userid = u.id)
                                         JOIN {role_assignments} ra ON (ra.userid = u.id)
@@ -126,27 +127,33 @@ class get_data_by_courses extends external_api {
                                         array('courseid' => $courseid));
                                         
         foreach($teachers as $teach){
-            
-            if($teach->shortname == 'manager'){
-                $managers[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
-                $managers[$teach->userid]['email'] = $teach->email;
-                $user_object = \core_user::get_user($teach->userid);
-                $userpicture = new user_picture($user_object);
-                $url = $userpicture->get_url($PAGE)->out(false);
-                $managers[$teach->userid]['image'] = $url;
-                $managers[$teach->userid]['shortname'] = $teach->shortname;
-            }else{
-                $teachersdata[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
-                $teachersdata[$teach->userid]['email'] = $teach->email;
-                $user_object = \core_user::get_user($teach->userid);
-                $userpicture = new user_picture($user_object);
-                $url = $userpicture->get_url($PAGE)->out(false);
-                $teachersdata[$teach->userid]['image'] = $url;
-                $teachersdata[$teach->userid]['shortname'] = $teach->shortname;
-            }
+            $teachersdata[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
+            $teachersdata[$teach->userid]['email'] = $teach->email;
+            $user_object = \core_user::get_user($teach->userid);
+            $userpicture = new user_picture($user_object);
+            $url = $userpicture->get_url($PAGE)->out(false);
+            $teachersdata[$teach->userid]['image'] = $url;
+            $teachersdata[$teach->userid]['shortname'] = $teach->shortname;
+            $teachersdata[$teach->userid]['roleName'] = $teach->roleName;
         }
-        $data['managers'] = array_values($managers);
-        $data['teachers'] = array_values($teachersdata);
+
+        $data['teachers'] = array_values($teachersdata);*/
+
+        // Get the list of teachers and managers in this course.
+        $context = \context_course::instance($courseid);
+        $teachers = get_enrolled_users($context, 'moodle/course:update', 0, 'u.*', null, 0, 0, true);
+        $managers = get_enrolled_users($context, 'moodle/category:manage', 0, 'u.*', null, 0, 0, true);
+        $teachers = array_merge($teachers, $managers);
+        $teachers = array_unique($teachers, SORT_REGULAR);
+        $data['teachers'] = $teachers;
+
+        // Get the list of enrollment methods.
+        $enrolinstances = enrol_get_instances($courseid, true);
+        $enrolmethods = [];
+        foreach ($enrolinstances as $instance) {
+            $enrolmethods[] = $instance->enrol;
+        }
+        $data['enrolmethods'] = $enrolmethods;
         
         $badges = $DB->get_records_sql("SELECT
                 bi.uniquehash,
