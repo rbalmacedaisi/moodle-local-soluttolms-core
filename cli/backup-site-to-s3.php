@@ -25,6 +25,20 @@
 
 define('CLI_SCRIPT', true);
 
+// We will proceed only if the config.php file exists.
+if (!file_exists(__DIR__ . '/../../../config.php')) {
+    echo "The config.php file does not exist. Please, create it.".PHP_EOL;
+    exit(1);
+}
+
+// Validate the config file integrity.
+try {
+    require(__DIR__ . '/../../../config.php');
+} catch (Exception $e) {
+    echo $e->errorcode . PHP_EOL;
+    return(1);
+}
+
 require(__DIR__ . '/../../../config.php');
 require_once($CFG->libdir . '/clilib.php');
 

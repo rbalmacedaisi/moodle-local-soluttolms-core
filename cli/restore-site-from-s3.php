@@ -25,6 +25,12 @@
 
 define('CLI_SCRIPT', true);
 
+// We will proceed only if the config.php file exists.
+if (!file_exists(__DIR__ . '/../../../config.php')) {
+    echo "The config.php file does not exist. Please, create it.".PHP_EOL;
+    exit(1);
+}
+
 // Variable to determine if there is a previous functional moodle site.
 $hasdb = true;
 
@@ -113,14 +119,17 @@ try {
     exit(1);
 }
 
-// Let's get the list of tables in the database.
-echo "Getting the list of tables in the database..." . PHP_EOL;
-$tables = $DB->get_tables();
+// If there is a database.
+if ($hasdb) {
+    // Let's get the list of tables in the database.
+    echo "Getting the list of tables in the database..." . PHP_EOL;
+    $tables = $DB->get_tables();
 
-// Let's drop all the tables in the database.
-foreach ($tables as $table) {
-    echo "Dropping the table {$table}..." . PHP_EOL;
-    $DB->get_manager()->drop_table(new xmldb_table($table));
+    // Let's drop all the tables in the database.
+    foreach ($tables as $table) {
+        echo "Dropping the table {$table}..." . PHP_EOL;
+        $DB->get_manager()->drop_table(new xmldb_table($table));
+    }
 }
 
 // Let's restore the database.
