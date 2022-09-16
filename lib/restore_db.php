@@ -37,12 +37,36 @@ function restoreDatabaseTables($dbHost, $dbUsername, $dbPassword, $dbName, $file
     $templine = '';
     
     // Read in entire file
-    $lines = file($filePath);
+    // $lines = file($filePath);
+    $handle = fopen($filePath, "r");
     
     $error = '';
+    if ($handle) {
+        while (($line = fgets($handle)) !== false) {
+            // Skip it if it's a comment
+            if(substr($line, 0, 2) == '--' || $line == ''){
+                continue;
+            }
+            
+            // Add this line to the current segment
+            $templine .= $line;
+            
+            // If it has a semicolon at the end, it's the end of the query
+            if (substr(trim($line), -1, 1) == ';'){
+                // Perform the query
+                if(!$db->query($templine)){
+                    $error .= 'Error performing query "<b>' . $templine . '</b>": ' . $db->error . '<br /><br />';
+                }
+                
+                // Reset temp variable to empty
+                $templine = '';
+            }
+        }
     
+        fclose($handle);
+    }
     // Loop through each line
-    foreach ($lines as $line){
+    /*foreach ($lines as $line){
         // Skip it if it's a comment
         if(substr($line, 0, 2) == '--' || $line == ''){
             continue;
@@ -61,6 +85,6 @@ function restoreDatabaseTables($dbHost, $dbUsername, $dbPassword, $dbName, $file
             // Reset temp variable to empty
             $templine = '';
         }
-    }
+    }*/
     return !empty($error)?$error:true;
 }

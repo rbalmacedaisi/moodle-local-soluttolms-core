@@ -25,7 +25,16 @@
 
 define('CLI_SCRIPT', true);
 
-require(__DIR__ . '/../../../config.php');
+// Variable to determine if there is a previous functional moodle site.
+$hasdb = true;
+
+try {
+    require(__DIR__ . '/../../../config.php');
+} catch (Exception $e) {
+    $hasdb = false;
+    echo $e->errorcode . PHP_EOL;
+}
+
 require_once($CFG->libdir . '/clilib.php');
 
 // Include the aws sdk.
@@ -150,5 +159,9 @@ unlink($restoredirectory . '/db.sql');
 // Let's purge the cache.
 echo "Purging the cache..." . PHP_EOL;
 purge_all_caches();
+
+// Let's run the upgrade.
+echo "Running the upgrade..." . PHP_EOL;
+exec("php {$CFG->dirroot}/admin/cli/upgrade.php --non-interactive");
 
 echo "The site was restored successfully." . PHP_EOL;
