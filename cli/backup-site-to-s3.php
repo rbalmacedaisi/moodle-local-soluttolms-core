@@ -39,7 +39,6 @@ try {
     return(1);
 }
 
-require(__DIR__ . '/../../../config.php');
 require_once($CFG->libdir . '/clilib.php');
 
 // Include the aws sdk.
