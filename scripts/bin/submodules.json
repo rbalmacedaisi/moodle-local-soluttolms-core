@@ -69,6 +69,11 @@
             "path": "blocks/sc_learningplans",
             "remote": "origin",
             "branch": "main"
+        },
+        {
+            "path": "local/soluttolxpmt",
+            "remote": "origin",
+            "branch": "main"
         }
     ]
 }
