@@ -100,10 +100,13 @@ class getcourses_by_token extends external_api {
                 
                 $categories = $DB->get_record('course_categories', array('id' => $mc->category));
                 
+                
                 $categorycontent[$categories->id]['namecategory'] = $categories->name;
                 $categorycontent[$categories->id]['urlcategory'] = $CFG->wwwroot . 'course/index.php?categoryid=' . $categories->id . '';
+                $categorycontent[$categories->id]['id'] = $categories->id;
+                $categorycontent[$categories->id]['visible'] = $categories->visible;
+                $categorycontent[$categories->id]['coursecount'] = $categories->coursecount;
                 $categorycontent[$categories->id]['courses'][] = $coursecontent;
-            
             }
         } else {
             $categorycontent = [];
