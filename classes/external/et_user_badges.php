@@ -79,7 +79,7 @@ class get_user_points extends external_api {
         require_once($CFG->libdir . "/badgeslib.php");
 
         // Get the list of badges for the user.
-        $badges = badges_get_user_badges($params['userid'], 0, 0, 10);
+        $badges = badges_get_user_badges($params['userid'], $params['courseid'], 0, 10);
 
         return ['badges' => json_encode($badges)];
     }
