@@ -70,4 +70,13 @@ $functions = array(
         'loginrequired' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
+    'local_soluttolms_core_get_user_points' => array(
+        'classname' => 'local_soluttolms_core\external\get_user_points',
+        'methodname' => 'execute',
+        'description' => 'Return the number of points of a user, either in a course or in the entire platform.',
+        'type' => 'read',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
 );
