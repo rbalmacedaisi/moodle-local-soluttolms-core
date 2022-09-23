@@ -79,4 +79,13 @@ $functions = array(
         'loginrequired' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
+    'local_soluttolms_core_get_user_badges' => array(
+        'classname' => 'local_soluttolms_core\external\et_user_badges',
+        'methodname' => 'execute',
+        'description' => 'Return the list of badges for a given user.',
+        'type' => 'read',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
 );
