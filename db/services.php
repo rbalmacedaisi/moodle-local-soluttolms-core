@@ -88,4 +88,13 @@ $functions = array(
         'loginrequired' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
+    'local_soluttolms_core_get_leaderboard_course' => array(
+        'classname' => 'local_soluttolms_core\external\get_leaderboard_course',
+        'methodname' => 'execute',
+        'description' => 'RReturns the leaderboard for the given course.',
+        'type' => 'read',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
 );
