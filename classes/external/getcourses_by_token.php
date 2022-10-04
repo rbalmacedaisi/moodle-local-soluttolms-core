@@ -84,9 +84,11 @@ class getcourses_by_token extends external_api {
         $categorycontent = [];
         if (!empty($mycourses)) {
             foreach ($mycourses as $key => $mc) { 
+                
                 $coursecontent['id'] = $mc->id;
                 $coursecontent['fullname'] = $mc->fullname;
                 $coursecontent['shortname'] = $mc->shortname;
+                $coursecontent['visible'] = $mc->visible;
                 $objcourse = get_course($mc->id);
                 $progress = \core_completion\progress::get_course_progress_percentage($objcourse, $userid);
                 if ($progress == NULL) {
