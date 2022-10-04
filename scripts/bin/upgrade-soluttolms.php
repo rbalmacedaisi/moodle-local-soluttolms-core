@@ -58,6 +58,8 @@ foreach ($sites['sites'] as $site) {
     // Pull the latest code from the Solutto LMS repository.
     exec("git checkout .", $log);
     exec("git pull " . $site['remote'] . " " . $site['branch'], $log);
+    exec('git submodule init', $log);
+    exec('git submodule update --recursive', $log);
     print_r($log);
     file_put_contents($logFile, print_r($log, true));
 
