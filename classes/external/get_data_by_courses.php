@@ -128,10 +128,7 @@ class get_data_by_courses extends external_api {
 
         foreach($teachers as $teach){
             
-            if($teach->shortname == 'manager' || 
-            $teach->shortname == 'coursecreator' || 
-            $teach->shortname == 'editingteacher' || 
-            $teach->shortname == 'teacher' ){
+            if($teach->shortname == 'editingteacher' || $teach->shortname == 'teacher' ){
                 $teachersdata[$teach->userid]['fullname'] = $teach->firstname.' '.$teach->lastname;
                 $teachersdata[$teach->userid]['email'] = $teach->email;
                 $user_object = \core_user::get_user($teach->userid);
