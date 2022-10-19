@@ -45,7 +45,7 @@ require_once $CFG->libdir . '/externallib.php';
  * @copyright   2022 Solutto Consulting <devs@soluttoconsulting.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class get_user_points extends external_api {
+class get_user_badges extends external_api {
 
     /**
      * Describes parameters of the {@see self::execute()} method.
