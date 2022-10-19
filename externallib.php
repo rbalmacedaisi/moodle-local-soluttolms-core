@@ -10,7 +10,6 @@ require_once($CFG->dirroot . "/mod/attendanceregister/lib.php");
 require_once($CFG->dirroot . '/user/externallib.php');
 require_once($CFG->dirroot . '/user/profile/lib.php');
 require_once($CFG->dirroot . '/files/externallib.php');
-require_once($CFG->dirroot . '/local/student_core/lib.php');
 
 class local_student_core_external extends external_api
 {
@@ -144,7 +143,7 @@ class local_student_core_external extends external_api
             $themevalues['value'] = $theme->value;
             $component = $theme->name;
 
-            $file = get_files_theme($component);
+            $file = ''; //get_files_theme($component);
             $themevalues['urlfile'] = $file;
 
             $result[] = $themevalues;
