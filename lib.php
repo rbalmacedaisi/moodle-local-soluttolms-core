@@ -113,7 +113,9 @@ function get_course_metadata($courseid) {
     $metadata = [];
     foreach ($datas as $data) {
         $cat = $data->get_field()->get('shortname');
-        $metadata[$data->get_field()->get('shortname')]['name'] = $cat;
+        $fullname = $data->get_field()->get('name');
+        $metadata[$data->get_field()->get('shortname')]['shortname'] = $cat;
+        $metadata[$data->get_field()->get('shortname')]['name'] = $fullname;
         $metadata[$data->get_field()->get('shortname')]['value'] = strip_tags($data->get_value());
     }
     return $metadata;
