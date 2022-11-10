@@ -74,6 +74,11 @@
             "path": "local/soluttolxpmt",
             "remote": "origin",
             "branch": "main"
+        },
+        {
+            "path": "local/enrollusersingroups",
+            "remote": "origin",
+            "branch": "master"
         }
     ]
 }
