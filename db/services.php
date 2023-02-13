@@ -97,4 +97,32 @@ $functions = array(
         'loginrequired' => true,
         'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
     ),
+    'local_soluttolms_core_get_user_profile' => array(
+        'classname' => 'local_soluttolms_core\external\get_user_profile',
+        'methodname' => 'execute',
+        'description' => 'Returns the user profile and custom fields.',
+        'type' => 'read',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'local_soluttolms_core_update_user_profile' => array(
+        'classname' => 'local_soluttolms_core\external\update_user_profile',
+        'methodname' => 'execute',
+        'description' => 'Update the user profile',
+        'type' => 'write',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    'local_soluttolms_core_update_user_profile_image' => array(
+        'classname' => 'local_soluttolms_core\external\update_user_profile_image',
+        'methodname' => 'execute',
+        'description' => 'Update the user profile image and returns the new url.',
+        'type' => 'write',
+        "ajax" => true,
+        'loginrequired' => true,
+        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE),
+    ),
+    
 );
