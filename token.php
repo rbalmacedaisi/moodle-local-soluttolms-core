@@ -109,13 +109,30 @@ if (!empty($user)) {
     } else {
         $usertoken->privatetoken = null;
     }
+    
+    //Get user profile data, field studentstatus
+    $field = $DB->get_record('user_info_field', array('shortname' => 'studentstatus'));
+    
+    //Get user info data Custom Fields
+    $user_info_data = $DB->get_record_sql("
+        SELECT d.*
+        FROM {user_info_data} d
+        JOIN {user} u ON u.id = d.userid
+        WHERE d.fieldid = ? AND u.deleted = 0 AND d.userid = ?
+    ", array($field->id, $user->id));
+    
+    
+    $customfield_value = $user_info_data->data;
+    
+    if(empty($customfield_value)){
+        $customfield_value = 'Activo';
+    }
 
     // Let's see if the current user has any of the folloing roles:
     // - Teacher.
     // - Manager.
     // - Non-editing teacher.
     // - Course creator.
-
     $ismanager = false;
 
     $sql = "SELECT r.shortname
@@ -124,7 +141,6 @@ if (!empty($user)) {
                     AND r.shortname IN ('teacher', 'manager', 'editingteacher', 'coursecreator')";
 
     $userroles = $DB->get_records_sql($sql , array($user->id));
-    
     if(!empty($userroles)){
         $ismanager = true;
     }
@@ -144,6 +160,7 @@ if (!empty($user)) {
     $returns['userid'] = $user->id;
     $returns['usertoken'] = $usertoken;
     $returns['manager'] = $ismanager;
+    $returns['userstatus'] = $customfield_value;
     echo json_encode($returns);
 } else {
     throw new moodle_exception('invalidlogin');
