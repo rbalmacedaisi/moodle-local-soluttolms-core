@@ -124,6 +124,11 @@ class get_data_by_courses extends external_api {
             foreach ($data['activities'] as &$activity) {
                 if (isset($activity['modules'])) {
                     foreach ($activity['modules'] as $key => &$module) {
+                        if (!empty($module['modname']) && $module['modname'] === 'bigbluebuttonbn') {
+                            // Keep BBB untagged so all BBB sessions remain under the dedicated
+                            // "Sesiones Virtuales" block in the student overview.
+                            continue;
+                        }
                         $idmodule = $module['id'];
                         
                         // Obtener tags por el ID del módulo 

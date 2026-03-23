@@ -226,6 +226,12 @@ function get_modules_and_sections($courseid, $userid){
             $module['visible'] = $cm->visible;
             $module['visibleoncoursepage'] = $cm->visibleoncoursepage;
             $module['uservisible'] = $cm->uservisible;
+            // BBB sessions can be intentionally restricted by date/group but still
+            // shown on course page (with availability info). Keep them in the
+            // payload so "Sesiones Virtuales" can render upcoming sessions.
+            if ($cm->modname === 'bigbluebuttonbn' && !$cm->uservisible && $cm->is_visible_on_course_page()) {
+                $module['uservisible'] = true;
+            }
             if (!empty($cm->availableinfo)) {
                 $module['availabilityinfo'] = \core_availability\info::format_info($cm->availableinfo, $course);
             }
