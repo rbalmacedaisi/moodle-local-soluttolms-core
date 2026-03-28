@@ -1,0 +1,16 @@
+<Files "token.php">
+    <IfModule mod_headers.c>
+        # Remove any Content-Length that PHP or Apache may have set prematurely.
+        # This is needed because Moodle's internal ob_end_flush() can send an
+        # empty HTTP response (Content-Length: 0) before PHP's echo runs for
+        # users whose token is reused via external_generate_token_for_current_user().
+        Header always unset Content-Length
+
+        # Force CORS headers at the Apache level so they survive regardless of
+        # whether PHP's output buffer was flushed prematurely.
+        Header always set Access-Control-Allow-Origin "https://students.isi.edu.pa"
+        Header always set Access-Control-Allow-Credentials "true"
+        Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+        Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    </IfModule>
+</Files>

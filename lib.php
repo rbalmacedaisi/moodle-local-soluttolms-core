@@ -207,8 +207,9 @@ function get_modules_and_sections($courseid, $userid){
                 $module['completiondata'] = $modulecompletiondata;
             }
 
-            if (!empty($cm->showdescription) or $module['noviewlink']) {
-                // We want to use the external format. However from reading get_formatted_content(), $cm->content format is always FORMAT_HTML.
+            // Always expose formatted intro/description when available so client UIs can render
+            // activity context consistently, even if "showdescription" is disabled.
+            if (!empty(trim(strip_tags((string)$cm->content)))) {
                 $options = array('noclean' => true);
                 list($module['description'], $descriptionformat) = external_format_text($cm->content,
                     FORMAT_HTML, $modcontext->id, $cm->modname, 'intro', $cm->id, $options);
