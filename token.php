@@ -22,6 +22,20 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+// Remove any Moodle session cookies before loading Moodle.
+// If a user has an active Moodle session (e.g. policyagreed=false, MFA pending,
+// or any state that forces re-login), resuming that session inside config.php
+// triggers a redirect to /login/ — which happens before the CORS header below
+// is set, causing a CORS error for that specific user only.
+// Clearing the cookies here forces Moodle to start a fresh session while still
+// keeping NO_MOODLE_COOKIES=false so that set_user() works correctly later.
+foreach (array_keys($_COOKIE) as $_cookie_name) {
+    if (strncmp($_cookie_name, 'MoodleSession', 13) === 0) {
+        unset($_COOKIE[$_cookie_name]);
+    }
+}
+unset($_cookie_name);
+
 define('AJAX_SCRIPT', true);
 define('REQUIRE_CORRECT_ACCESS', true);
 define('NO_MOODLE_COOKIES', false);
