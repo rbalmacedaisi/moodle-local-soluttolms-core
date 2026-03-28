@@ -4,7 +4,7 @@
 // ELIMINAR ESTE ARCHIVO DESPUÉS DE USARLO
 // =============================================================================
 
-define('CLI_SCRIPT', true);
+define('AJAX_SCRIPT', true);
 define('NO_MOODLE_COOKIES', true);
 
 $username_input = trim($_POST['username'] ?? '');
@@ -13,14 +13,11 @@ $action         = $_POST['action'] ?? '';
 $result = null;
 
 if ($username_input !== '') {
-    ob_start();
     try {
         require_once('../../config.php');
     } catch (Throwable $e) {
-        ob_end_clean();
         $result = ['error' => 'config.php falló: ' . htmlspecialchars($e->getMessage())];
     }
-    if (ob_get_level()) ob_end_clean();
 
     if (!isset($DB)) {
         $result = ['error' => 'Moodle no cargó correctamente.'];
