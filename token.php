@@ -22,16 +22,20 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// NO_MOODLE_COOKIES=true mirrors Moodle's own /login/token.php.
-// With false, PHP session initialization during config.php causes premature
-// output buffering flush for users with existing DB sessions, resulting in
-// Content-Length: 0 being sent before the actual JSON body, which makes
-// browsers discard the response entirely.
-// set_user() works correctly with NO_MOODLE_COOKIES=true (Moodle's own
-// token endpoint uses the same pattern).
+// Remove any Moodle session cookies before loading Moodle.
+// Users with policyagreed=false or MFA pending have sessions that force a
+// redirect inside config.php when NO_MOODLE_COOKIES=false, which happens
+// before the CORS header is set.
+foreach (array_keys($_COOKIE) as $_cookie_name) {
+    if (strncmp($_cookie_name, 'MoodleSession', 13) === 0) {
+        unset($_COOKIE[$_cookie_name]);
+    }
+}
+unset($_cookie_name);
+
 define('AJAX_SCRIPT', true);
 define('REQUIRE_CORRECT_ACCESS', true);
-define('NO_MOODLE_COOKIES', true);
+define('NO_MOODLE_COOKIES', false);
 
 require_once('../../config.php');
 require_once($CFG->libdir . '/externallib.php');
@@ -166,6 +170,14 @@ if (!empty($user)) {
     $returns['usertoken'] = $usertoken;
     $returns['manager'] = $ismanager;
     $returns['userstatus'] = $customfield_value;
+
+    // Moodle's internal session handling can set Content-Length: 0 prematurely
+    // for users with existing DB sessions, causing browsers to discard the body.
+    // Remove it and re-assert CORS so the final response is always correct.
+    header_remove('Content-Length');
+    header('Access-Control-Allow-Origin: ' . $CFG->appurl);
+    header('Access-Control-Allow-Credentials: true');
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode($returns);
 } else {
     throw new moodle_exception('invalidlogin');
