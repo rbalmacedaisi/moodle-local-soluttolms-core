@@ -171,9 +171,14 @@ if (!empty($user)) {
     $returns['manager'] = $ismanager;
     $returns['userstatus'] = $customfield_value;
 
-    // Moodle's internal session handling can set Content-Length: 0 prematurely
-    // for users with existing DB sessions, causing browsers to discard the body.
-    // Remove it and re-assert CORS so the final response is always correct.
+    // Flush all output buffers (same pattern as Moodle's exception handler).
+    // Moodle may call ob_end_clean() internally during token generation, which
+    // discards queued PHP headers (including CORS). Closing all buffers here
+    // and re-asserting headers guarantees a clean response regardless of what
+    // Moodle's session/token handling did to the buffer stack.
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
     header_remove('Content-Length');
     header('Access-Control-Allow-Origin: ' . $CFG->appurl);
     header('Access-Control-Allow-Credentials: true');
