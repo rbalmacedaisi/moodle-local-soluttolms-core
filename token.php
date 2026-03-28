@@ -22,28 +22,17 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// Set CORS headers before Moodle initialization so they are present even if
-// Moodle issues a redirect during config.php loading (e.g. due to session state).
-if (!empty($_SERVER['HTTP_ORIGIN'])) {
-    header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-    header('Access-Control-Allow-Credentials: true');
-}
-
 define('AJAX_SCRIPT', true);
 define('REQUIRE_CORRECT_ACCESS', true);
-// Must be true (like standard Moodle login/token.php) so that browser session
-// cookies are ignored. With false, if a user has an active Moodle session in a
-// special state (forced password change, policy agreement, MFA, etc.) Moodle
-// redirects to /login/ during config.php — before the CORS headers below are set.
-define('NO_MOODLE_COOKIES', true);
+define('NO_MOODLE_COOKIES', false);
 
 
 require_once('../../config.php');
 require_once($CFG->libdir . '/externallib.php');
 
-// Re-set CORS with the validated origin from Moodle config.
 header('Access-Control-Allow-Origin: '.$CFG->appurl);
 header('Access-Control-Allow-Credentials: true');
+// Allow CORS requests.
 
 if (!$CFG->enablewebservices) {
     throw new moodle_exception('enablewsdescription', 'webservice');
