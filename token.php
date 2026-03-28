@@ -22,43 +22,20 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// Step 1: Send CORS header BEFORE loading Moodle.
-// If config.php sends a redirect (302) for any reason, this header is already
-// in the response so the browser won't get a CORS error.
-// We reflect the request Origin; after config.php loads we overwrite with $CFG->appurl.
-$_cors_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($_cors_origin !== '') {
-    header('Access-Control-Allow-Origin: ' . $_cors_origin);
-    header('Access-Control-Allow-Credentials: true');
-}
-unset($_cors_origin);
-
-// Step 2: Remove MoodleSession cookies so config.php starts a fresh session.
-// Also send Set-Cookie headers with past expiry to DELETE them from the browser —
-// without this, the user's browser keeps sending the cookie on every request.
-foreach (array_keys($_COOKIE) as $_cookie_name) {
-    if (strncmp($_cookie_name, 'MoodleSession', 13) === 0) {
-        unset($_COOKIE[$_cookie_name]);
-        setcookie($_cookie_name, '', [
-            'expires'  => time() - 86400,
-            'path'     => '/',
-            'httponly' => true,
-            'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
-            'samesite' => 'Lax',
-        ]);
-    }
-}
-unset($_cookie_name);
-
+// NO_MOODLE_COOKIES=true mirrors Moodle's own /login/token.php.
+// With false, PHP session initialization during config.php causes premature
+// output buffering flush for users with existing DB sessions, resulting in
+// Content-Length: 0 being sent before the actual JSON body, which makes
+// browsers discard the response entirely.
+// set_user() works correctly with NO_MOODLE_COOKIES=true (Moodle's own
+// token endpoint uses the same pattern).
 define('AJAX_SCRIPT', true);
 define('REQUIRE_CORRECT_ACCESS', true);
-define('NO_MOODLE_COOKIES', false);
-
+define('NO_MOODLE_COOKIES', true);
 
 require_once('../../config.php');
 require_once($CFG->libdir . '/externallib.php');
 
-// Overwrite with the configured origin now that $CFG is available.
 header('Access-Control-Allow-Origin: ' . $CFG->appurl);
 header('Access-Control-Allow-Credentials: true');
 
