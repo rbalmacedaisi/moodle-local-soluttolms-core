@@ -4,7 +4,6 @@
 // ELIMINAR ESTE ARCHIVO DESPUÉS DE USARLO
 // =============================================================================
 
-define('AJAX_SCRIPT', true);
 define('NO_MOODLE_COOKIES', true);
 
 $username_input = trim($_POST['username'] ?? '');
