@@ -1,4 +1,11 @@
 <?php
+// Outer output buffer — must be the very first statement.
+// Moodle calls ob_end_flush() internally (during session/token handling) with
+// an empty buffer, which without this wrapper sends a premature empty HTTP
+// response to Apache (Content-Length: 0) before our echo runs.
+// With this wrapper any internal flush goes into our buffer, not to Apache.
+ob_start();
+
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
