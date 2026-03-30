@@ -14,6 +14,7 @@ $result = null;
 if ($username_input !== '') {
     try {
         require_once('../../config.php');
+        require_once($CFG->libdir . '/externallib.php');
     } catch (Throwable $e) {
         $result = ['error' => 'config.php falló: ' . htmlspecialchars($e->getMessage())];
     }
@@ -166,7 +167,54 @@ if ($username_input !== '') {
                 $problems[] = 'Capability "webservice/rest:use" DENEGADA — no puede usar el servicio REST';
             }
 
-            // 7. Simular token generation para obtener el error exacto
+            // Qué roles tienen esta capability (ALLOW=1, PROHIBIT=-1000, ausente=vacío)
+            $cap_roles_analysis = $DB->get_records_sql(
+                "SELECT rc.roleid, r.shortname, r.name, rc.permission
+                   FROM {role_capabilities} rc
+                   JOIN {role} r ON r.id = rc.roleid
+                  WHERE rc.capability = 'moodle/webservice:createtoken'
+                    AND rc.contextid  = ?
+               ORDER BY rc.permission",
+                [$sysctx->id]
+            );
+            // Roles del usuario en contexto sistema
+            $user_sysroles = $DB->get_records_sql(
+                "SELECT ra.roleid, r.shortname, r.name
+                   FROM {role_assignments} ra
+                   JOIN {role} r ON r.id = ra.roleid
+                  WHERE ra.userid = ? AND ra.contextid = ?",
+                [$user->id, $sysctx->id]
+            );
+
+            // 7. Corrección de capability en acción fix
+            if ($action === 'fix' && !$cap_createtoken) {
+                // Usar assign_capability() de Moodle — maneja caché automáticamente
+                foreach ($user_sysroles as $sr) {
+                    try {
+                        assign_capability('moodle/webservice:createtoken', CAP_ALLOW, $sr->roleid, $sysctx->id, true);
+                        $fixes[] = '✓ moodle/webservice:createtoken = ALLOW asignado al rol "' . $sr->shortname . '" en contexto sistema';
+                    } catch (Throwable $e) {
+                        $errs[] = 'Error asignando capability al rol "' . $sr->shortname . '": ' . $e->getMessage();
+                    }
+                }
+                // Si el usuario no tiene ningún rol de sistema, asignarlo al "authenticated user" role
+                if (empty($user_sysroles)) {
+                    try {
+                        $auth_role = $DB->get_record('role', ['shortname' => 'user'], 'id,shortname', IGNORE_MISSING);
+                        if ($auth_role) {
+                            assign_capability('moodle/webservice:createtoken', CAP_ALLOW, $auth_role->id, $sysctx->id, true);
+                            $fixes[] = '✓ moodle/webservice:createtoken = ALLOW asignado al rol "user" (authenticated user)';
+                        }
+                    } catch (Throwable $e) {
+                        $errs[] = 'Error asignando capability a authenticated user: ' . $e->getMessage();
+                    }
+                }
+                // Refrescar valores
+                $cap_createtoken = has_capability('moodle/webservice:createtoken', $sysctx, $user->id, false);
+                if (!$cap_createtoken) $problems[] = 'moodle/webservice:createtoken sigue denegada';
+            }
+
+            // 8. Simular token generation para obtener el error exacto
             $token_test = null;
             try {
                 $svc_test = $DB->get_record('external_services', ['shortname' => 'moodle_mobile_app', 'enabled' => 1], '*', IGNORE_MISSING);
@@ -174,13 +222,16 @@ if ($username_input !== '') {
                     \core\session\manager::set_user($user);
                     $tok = external_generate_token_for_current_user($svc_test);
                     $token_test = ['ok' => true, 'token_id' => $tok->id, 'token' => substr($tok->token, 0, 8) . '...'];
-                    \core\session\manager::set_user(\core\session\manager::get_realuser()); // restaurar
                 } else {
                     $token_test = ['ok' => false, 'error' => 'Servicio moodle_mobile_app no encontrado o deshabilitado'];
                 }
             } catch (Throwable $e) {
                 $token_test = ['ok' => false, 'error' => get_class($e) . ': ' . $e->getMessage()];
-                $problems[] = 'Generación de token falló: ' . $e->getMessage();
+                if (!$cap_createtoken) {
+                    // Ya está en $problems por la capability — no duplicar
+                } else {
+                    $problems[] = 'Generación de token falló: ' . $e->getMessage();
+                }
             }
 
             // ── Acción fix: limpiar tokens vencidos + setear studentstatus ────────
@@ -245,9 +296,11 @@ if ($username_input !== '') {
                 'svc_access'        => $svc_access,
                 'roles'             => array_values($roles),
                 'auth_plugin_ok'    => $auth_plugin_ok,
-                'cap_createtoken'   => $cap_createtoken,
-                'cap_rest'          => $cap_rest,
-                'token_test'        => $token_test,
+                'cap_createtoken'      => $cap_createtoken,
+                'cap_rest'             => $cap_rest,
+                'cap_roles_analysis'   => array_values($cap_roles_analysis),
+                'user_sysroles'        => array_values($user_sysroles),
+                'token_test'           => $token_test,
             ];
         }
     }
@@ -525,6 +578,48 @@ if ($username_input !== '') {
           <?= $result['cap_rest'] ? 'PERMITIDA' : 'DENEGADA' ?>
         </span>
       </div>
+
+      <?php if (!empty($result['cap_roles_analysis'])): ?>
+      <div style="margin-top:10px">
+        <div style="font-size:.78rem;font-weight:700;color:#888;text-transform:uppercase;margin-bottom:6px">
+          Roles con <code>moodle/webservice:createtoken</code> explícito en contexto sistema
+        </div>
+        <table>
+          <tr><th>Rol (shortname)</th><th>Nombre</th><th>Permiso</th></tr>
+          <?php foreach ($result['cap_roles_analysis'] as $cr): ?>
+          <tr>
+            <td><code><?= htmlspecialchars($cr->shortname) ?></code></td>
+            <td><?= htmlspecialchars($cr->name) ?></td>
+            <td>
+              <?php if ($cr->permission == 1): ?>
+                <span class="badge badge-ok">ALLOW (1)</span>
+              <?php elseif ($cr->permission <= -1000): ?>
+                <span class="badge badge-err">PROHIBIT (-1000) — bloquea el acceso aunque otro rol lo permita</span>
+              <?php else: ?>
+                <span class="badge badge-warn">PREVENT (<?= $cr->permission ?>)</span>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </table>
+      </div>
+      <?php else: ?>
+      <p style="font-size:.82rem;color:#856404;margin-top:8px">
+        ⚠ Ningún rol tiene esta capability definida explícitamente en el contexto sistema —
+        el valor efectivo viene del arquetipo base del rol o está vacío (equivale a denegado si
+        el arquetipo no la incluye).
+      </p>
+      <?php endif; ?>
+
+      <?php if (!empty($result['user_sysroles'])): ?>
+      <div style="margin-top:8px;font-size:.82rem;color:#555">
+        Roles del usuario en contexto sistema:
+        <?php foreach ($result['user_sysroles'] as $sr): ?>
+          <code style="background:#f0f2f5;padding:1px 6px;border-radius:4px"><?= htmlspecialchars($sr->shortname) ?></code>
+        <?php endforeach; ?>
+        — El botón <strong>Corregir</strong> asignará ALLOW a estos roles.
+      </div>
+      <?php endif; ?>
     </div>
 
     <div class="section">
