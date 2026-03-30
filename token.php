@@ -144,16 +144,17 @@ if (!empty($user)) {
         }
     }
 
-    // Check if the user has a site-level management role (triggers Moodle redirect).
-    // Intentionally excludes 'teacher' and 'editingteacher': in this system LXP
-    // teachers use the scteachrole and must land on the LXP teacher dashboard,
-    // not on Moodle. Only true site managers and course creators go to Moodle.
+    // Let's see if the current user has any of the folloing roles:
+    // - Teacher.
+    // - Manager.
+    // - Non-editing teacher.
+    // - Course creator.
     $ismanager = false;
 
     $sql = "SELECT r.shortname
               FROM {role_assignments} ra, {role} r
              WHERE ra.userid = ? AND ra.roleid = r.id
-                    AND r.shortname IN ('manager', 'coursecreator')";
+                    AND r.shortname IN ('teacher', 'manager', 'editingteacher', 'coursecreator')";
 
     $userroles = $DB->get_records_sql($sql , array($user->id));
     if(!empty($userroles)){
