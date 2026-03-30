@@ -78,7 +78,7 @@ if ($username_input !== '') {
                 if (!$user->policyagreed)  $problems[] = 'policyagreed sigue en false';
                 if (empty($user->confirmed)) $problems[] = 'confirmed sigue en 0';
 
-                $fix_result = ['fixes' => $fixes, 'errors' => $errs];
+                // $fix_result se construye al final, después de todos los fixes (capability, etc.)
             }
 
             // ── Diagnóstico extendido ─────────────────────────────────────────────
@@ -214,24 +214,32 @@ if ($username_input !== '') {
                 if (!$cap_createtoken) $problems[] = 'moodle/webservice:createtoken sigue denegada';
             }
 
-            // 8. Simular token generation para obtener el error exacto
+            // 8. Simular token generation (solo si la capability está OK y la función existe)
             $token_test = null;
-            try {
-                $svc_test = $DB->get_record('external_services', ['shortname' => 'moodle_mobile_app', 'enabled' => 1], '*', IGNORE_MISSING);
-                if ($svc_test) {
-                    \core\session\manager::set_user($user);
-                    $tok = external_generate_token_for_current_user($svc_test);
-                    $token_test = ['ok' => true, 'token_id' => $tok->id, 'token' => substr($tok->token, 0, 8) . '...'];
-                } else {
-                    $token_test = ['ok' => false, 'error' => 'Servicio moodle_mobile_app no encontrado o deshabilitado'];
+            if ($cap_createtoken) {
+                // Intentar cargar externallib si aún no está disponible
+                if (!function_exists('external_generate_token_for_current_user') && isset($CFG)) {
+                    @include_once($CFG->libdir . '/externallib.php');
                 }
-            } catch (Throwable $e) {
-                $token_test = ['ok' => false, 'error' => get_class($e) . ': ' . $e->getMessage()];
-                if (!$cap_createtoken) {
-                    // Ya está en $problems por la capability — no duplicar
+                if (!function_exists('external_generate_token_for_current_user')) {
+                    $token_test = ['ok' => null, 'error' => 'Función external_generate_token_for_current_user no disponible en este contexto (externallib.php requiere sesión activa). La capability está OK — el login debería funcionar.'];
                 } else {
-                    $problems[] = 'Generación de token falló: ' . $e->getMessage();
+                    try {
+                        $svc_test = $DB->get_record('external_services', ['shortname' => 'moodle_mobile_app', 'enabled' => 1], '*', IGNORE_MISSING);
+                        if ($svc_test) {
+                            \core\session\manager::set_user($user);
+                            $tok = external_generate_token_for_current_user($svc_test);
+                            $token_test = ['ok' => true, 'token_id' => $tok->id, 'token' => substr($tok->token, 0, 8) . '...'];
+                        } else {
+                            $token_test = ['ok' => false, 'error' => 'Servicio moodle_mobile_app no encontrado o deshabilitado'];
+                        }
+                    } catch (Throwable $e) {
+                        $token_test = ['ok' => false, 'error' => get_class($e) . ': ' . $e->getMessage()];
+                        $problems[] = 'Generación de token falló: ' . $e->getMessage();
+                    }
                 }
+            } else {
+                $token_test = ['ok' => false, 'error' => 'No ejecutada — capability moodle/webservice:createtoken denegada. Aplica el fix primero.'];
             }
 
             // ── Acción fix: limpiar tokens vencidos + setear studentstatus ────────
@@ -284,6 +292,11 @@ if ($username_input !== '') {
                 if ($sf_field && (!$sf_data || empty($sf_data->data))) {
                     $problems[] = 'Campo "studentstatus" aún sin valor';
                 }
+            }
+
+            // fix_result se construye aquí para capturar TODOS los fixes (capability incluida)
+            if (isset($fixes)) {
+                $fix_result = ['fixes' => $fixes, 'errors' => $errs ?? []];
             }
 
             $result = [
@@ -627,11 +640,15 @@ if ($username_input !== '') {
       <?php $tt = $result['token_test']; ?>
       <?php if ($tt === null): ?>
         <p style="font-size:.88rem;color:#888">No ejecutada.</p>
-      <?php elseif ($tt['ok']): ?>
+      <?php elseif ($tt['ok'] === true): ?>
         <div class="fix-box">
           <strong>✅ Token generado correctamente</strong>
           <div class="fix-item">ID: <?= (int)$tt['token_id'] ?> — Token: <code><?= htmlspecialchars($tt['token']) ?></code></div>
-          <div class="fix-item" style="color:#555;font-size:.82rem">Si este paso pasa pero el login en la LXP sigue fallando, el problema está en el cliente (token en localStorage corrupto o la redirección a Moodle falla).</div>
+          <div class="fix-item" style="color:#555;font-size:.82rem">Si este paso pasa pero el login en la LXP sigue fallando, el problema está en el cliente (localStorage corrupto o redirección a Moodle falla).</div>
+        </div>
+      <?php elseif ($tt['ok'] === null): ?>
+        <div style="background:#e8f4fd;border-left:4px solid #1a73e8;padding:10px 14px;border-radius:4px;font-size:.82rem">
+          ℹ <?= htmlspecialchars($tt['error']) ?>
         </div>
       <?php else: ?>
         <div class="warn-box">
