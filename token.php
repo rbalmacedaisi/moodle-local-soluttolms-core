@@ -128,20 +128,20 @@ if (!empty($user)) {
     
     //Get user profile data, field studentstatus
     $field = $DB->get_record('user_info_field', array('shortname' => 'studentstatus'));
-    
-    //Get user info data Custom Fields
-    $user_info_data = $DB->get_record_sql("
-        SELECT d.*
-        FROM {user_info_data} d
-        JOIN {user} u ON u.id = d.userid
-        WHERE d.fieldid = ? AND u.deleted = 0 AND d.userid = ?
-    ", array($field->id, $user->id));
-    
-    
-    $customfield_value = $user_info_data->data;
-    
-    if(empty($customfield_value)){
-        $customfield_value = 'Activo';
+
+    // Guard: field or user_info_data may not exist for non-student accounts (teachers, managers).
+    // PHP 8 throws TypeError when reading a property on false/null, crashing the response.
+    $customfield_value = 'Activo';   // safe default
+    if (!empty($field)) {
+        $user_info_data = $DB->get_record_sql("
+            SELECT d.*
+              FROM {user_info_data} d
+              JOIN {user} u ON u.id = d.userid
+             WHERE d.fieldid = ? AND u.deleted = 0 AND d.userid = ?
+        ", array($field->id, $user->id));
+        if (!empty($user_info_data) && !empty($user_info_data->data)) {
+            $customfield_value = $user_info_data->data;
+        }
     }
 
     // Let's see if the current user has any of the folloing roles:

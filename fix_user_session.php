@@ -69,11 +69,143 @@ if ($username_input !== '') {
                 $fix_result = ['fixes' => $fixes, 'errors' => $errs];
             }
 
+            // ── Diagnóstico extendido ─────────────────────────────────────────────
+            // 1. Campo personalizado studentstatus
+            $sf_field = $DB->get_record('user_info_field', ['shortname' => 'studentstatus'], 'id,name,shortname', IGNORE_MISSING);
+            $sf_data  = null;
+            if ($sf_field) {
+                $sf_data = $DB->get_record_sql(
+                    "SELECT d.data FROM {user_info_data} d WHERE d.fieldid = ? AND d.userid = ?",
+                    [$sf_field->id, $user->id], IGNORE_MISSING
+                );
+            }
+            $studentstatus_diag = [
+                'field_exists' => !empty($sf_field),
+                'has_value'    => !empty($sf_data),
+                'value'        => $sf_data ? $sf_data->data : null,
+            ];
+            if (!$sf_field) {
+                $problems[] = 'Campo personalizado "studentstatus" no existe en el sistema';
+            } elseif (!$sf_data || empty($sf_data->data)) {
+                $problems[] = 'Usuario sin valor en el campo "studentstatus" — token.php lanza TypeError en PHP 8 al leer ->data sobre false';
+            }
+
+            // 2. External tokens
+            $ext_tokens = $DB->get_records_sql(
+                "SELECT et.id, et.token, et.creatorid, et.timecreated, et.validuntil, et.iprestriction,
+                        es.shortname AS servicename
+                   FROM {external_tokens} et
+                   JOIN {external_services} es ON es.id = et.externalserviceid
+                  WHERE et.userid = ?
+               ORDER BY et.timecreated DESC",
+                [$user->id]
+            );
+            if (count($ext_tokens) > 0) {
+                $now = time();
+                foreach ($ext_tokens as $tk) {
+                    if ($tk->validuntil > 0 && $tk->validuntil < $now) {
+                        $problems[] = 'Token expirado para servicio "' . $tk->servicename . '" (id=' . $tk->id . ')';
+                    }
+                }
+            }
+
+            // 3. Servicio moodle_mobile_app — acceso
+            $svc = $DB->get_record('external_services', ['shortname' => 'moodle_mobile_app', 'enabled' => 1], 'id,name,restrictedusers,enabled', IGNORE_MISSING);
+            $svc_access = null;
+            if ($svc) {
+                if ($svc->restrictedusers) {
+                    $in_list = $DB->record_exists('external_services_users', ['externalserviceid' => $svc->id, 'userid' => $user->id]);
+                    $svc_access = $in_list ? 'autorizado (en lista)' : 'DENEGADO — servicio restringido y usuario no está en la lista';
+                    if (!$in_list) {
+                        $problems[] = 'Servicio "moodle_mobile_app" restringido a usuarios específicos y este usuario no está en la lista';
+                    }
+                } else {
+                    $svc_access = 'abierto a todos los usuarios';
+                }
+            } else {
+                $svc_access = 'Servicio "moodle_mobile_app" no encontrado o deshabilitado';
+                $problems[] = $svc_access;
+            }
+
+            // 4. Roles asignados
+            $roles = $DB->get_records_sql(
+                "SELECT ra.id, r.shortname, r.name, ctx.contextlevel, ctx.instanceid
+                   FROM {role_assignments} ra
+                   JOIN {role} r ON r.id = ra.roleid
+                   JOIN {context} ctx ON ctx.id = ra.contextid
+                  WHERE ra.userid = ?
+               ORDER BY ctx.contextlevel, r.shortname",
+                [$user->id]
+            );
+
+            // 5. Auth plugin
+            $auth_plugin_ok = in_array($user->auth, get_enabled_auth_plugins());
+            if (!$auth_plugin_ok) {
+                $problems[] = 'Plugin de autenticación "' . $user->auth . '" no está habilitado';
+            }
+
+            // ── Acción fix: limpiar tokens vencidos + setear studentstatus ────────
+            if ($action === 'fix') {
+                // Limpiar tokens expirados
+                try {
+                    $now = time();
+                    $del = $DB->execute(
+                        "DELETE FROM {external_tokens} WHERE userid = ? AND validuntil > 0 AND validuntil < ?",
+                        [$user->id, $now]
+                    );
+                    $fixes[] = '✓ Tokens expirados eliminados';
+                } catch (Throwable $e) {
+                    $errs[] = 'Error limpiando tokens: ' . $e->getMessage();
+                }
+                // Crear entrada studentstatus si no existe
+                if ($sf_field && !$sf_data) {
+                    try {
+                        $rec = new stdClass();
+                        $rec->userid   = $user->id;
+                        $rec->fieldid  = $sf_field->id;
+                        $rec->data     = 'Activo';
+                        $rec->dataformat = 0;
+                        $DB->insert_record('user_info_data', $rec);
+                        $fixes[] = '✓ Campo "studentstatus" = "Activo" creado para este usuario';
+                    } catch (Throwable $e) {
+                        $errs[] = 'Error creando studentstatus: ' . $e->getMessage();
+                    }
+                }
+                // Recargar
+                $ext_tokens = $DB->get_records_sql(
+                    "SELECT et.id, et.token, et.creatorid, et.timecreated, et.validuntil, et.iprestriction,
+                            es.shortname AS servicename
+                       FROM {external_tokens} et
+                       JOIN {external_services} es ON es.id = et.externalserviceid
+                      WHERE et.userid = ?
+                   ORDER BY et.timecreated DESC",
+                    [$user->id]
+                );
+                $sf_data = $sf_field
+                    ? $DB->get_record_sql(
+                        "SELECT d.data FROM {user_info_data} d WHERE d.fieldid = ? AND d.userid = ?",
+                        [$sf_field->id, $user->id], IGNORE_MISSING
+                      )
+                    : null;
+                // Re-evaluar problems
+                $problems = [];
+                if (count($sessions) > 0) $problems[] = count($sessions) . ' sesión(es) activa(s) restantes';
+                if (!$user->policyagreed)  $problems[] = 'policyagreed sigue en false';
+                if ($sf_field && (!$sf_data || empty($sf_data->data))) {
+                    $problems[] = 'Campo "studentstatus" aún sin valor';
+                }
+            }
+
             $result = [
-                'user'       => $user,
-                'sessions'   => array_values($sessions),
-                'problems'   => $problems,
-                'fix_result' => $fix_result,
+                'user'              => $user,
+                'sessions'          => array_values($sessions),
+                'problems'          => $problems,
+                'fix_result'        => $fix_result,
+                'studentstatus'     => $studentstatus_diag,
+                'ext_tokens'        => array_values($ext_tokens),
+                'svc_access'        => $svc_access,
+                'roles'             => array_values($roles),
+                'auth_plugin_ok'    => $auth_plugin_ok,
             ];
         }
     }
@@ -232,6 +364,103 @@ if ($username_input !== '') {
             <div style="margin-top:8px">Presiona <strong>Corregir</strong> para aplicar el fix automáticamente.</div>
           <?php endif; ?>
         </div>
+      <?php endif; ?>
+    </div>
+
+    <!-- ── Diagnóstico extendido ──────────────────────────────────────────── -->
+
+    <div class="section">
+      <div class="section-title">Auth &amp; Plugin</div>
+      <div class="field">
+        <span class="field-label">Plugin de autenticación</span>
+        <span>
+          <?= htmlspecialchars($u->auth) ?>
+          <span class="badge <?= $result['auth_plugin_ok'] ? 'badge-ok' : 'badge-err' ?>" style="margin-left:6px">
+            <?= $result['auth_plugin_ok'] ? 'habilitado' : 'DESHABILITADO' ?>
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Campo personalizado <code>studentstatus</code></div>
+      <?php $ss = $result['studentstatus']; ?>
+      <div class="field"><span class="field-label">Campo existe en el sistema</span>
+        <span class="badge <?= $ss['field_exists'] ? 'badge-ok' : 'badge-err' ?>">
+          <?= $ss['field_exists'] ? 'sí' : 'NO — falta en user_info_field' ?>
+        </span>
+      </div>
+      <div class="field"><span class="field-label">Valor para este usuario</span>
+        <span class="badge <?= $ss['has_value'] ? 'badge-ok' : 'badge-warn' ?>">
+          <?= $ss['has_value'] ? htmlspecialchars($ss['value']) : 'SIN VALOR — causa TypeError en token.php (PHP 8)' ?>
+        </span>
+      </div>
+      <?php if (!$ss['has_value']): ?>
+        <p style="font-size:.82rem;color:#856404;margin-top:6px">
+          ⚠ <strong>Causa raíz probable del error de login:</strong> <code>token.php</code> lee
+          <code>$user_info_data->data</code> sin verificar que el objeto exista.
+          En PHP 8 lanza <em>TypeError</em>, Moodle responde con JSON de excepción (sin <code>usertoken</code>),
+          y el store JS falla con <em>Cannot read properties of undefined (reading 'token')</em>.
+        </p>
+      <?php endif; ?>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Servicio Web (<code>moodle_mobile_app</code>)</div>
+      <div class="field">
+        <span class="field-label">Acceso</span>
+        <span class="badge <?= str_starts_with($result['svc_access'], 'DENEGADO') || str_starts_with($result['svc_access'], 'Servicio') ? 'badge-err' : 'badge-ok' ?>">
+          <?= htmlspecialchars($result['svc_access']) ?>
+        </span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Tokens externos (<code>external_tokens</code>)
+        <span class="badge badge-ok" style="margin-left:8px"><?= count($result['ext_tokens']) ?></span>
+      </div>
+      <?php if (count($result['ext_tokens']) > 0): ?>
+        <table>
+          <tr><th>ID</th><th>Servicio</th><th>Creado</th><th>Válido hasta</th><th>IP</th></tr>
+          <?php foreach ($result['ext_tokens'] as $tk):
+            $expired = $tk->validuntil > 0 && $tk->validuntil < time();
+          ?>
+            <tr <?= $expired ? 'style="background:#fff0f0"' : '' ?>>
+              <td><?= (int)$tk->id ?></td>
+              <td><?= htmlspecialchars($tk->servicename) ?></td>
+              <td><?= date('Y-m-d H:i', $tk->timecreated) ?></td>
+              <td><?= $tk->validuntil ? date('Y-m-d H:i', $tk->validuntil) . ($expired ? ' <strong style="color:#c0392b">[EXPIRADO]</strong>' : '') : '<em style="color:#aaa">sin límite</em>' ?></td>
+              <td><?= htmlspecialchars($tk->iprestriction ?: '—') ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      <?php else: ?>
+        <p style="font-size:.88rem;color:#555">Sin tokens generados.</p>
+      <?php endif; ?>
+    </div>
+
+    <div class="section">
+      <div class="section-title">
+        Roles asignados
+        <span class="badge badge-ok" style="margin-left:8px"><?= count($result['roles']) ?></span>
+      </div>
+      <?php if (count($result['roles']) > 0): ?>
+        <table>
+          <tr><th>Rol (shortname)</th><th>Nombre</th><th>Nivel contexto</th><th>instanceid</th></tr>
+          <?php
+          $ctx_levels = [10=>'Sistema',30=>'User',40=>'Course cat.',50=>'Course',70=>'Module',80=>'Block'];
+          foreach ($result['roles'] as $r): ?>
+            <tr>
+              <td><code><?= htmlspecialchars($r->shortname) ?></code></td>
+              <td><?= htmlspecialchars($r->name) ?></td>
+              <td><?= $ctx_levels[$r->contextlevel] ?? $r->contextlevel ?></td>
+              <td><?= (int)$r->instanceid ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      <?php else: ?>
+        <p style="font-size:.88rem;color:#c0392b;font-weight:600">Sin roles asignados — el campo <code>manager</code> será false en token.php.</p>
       <?php endif; ?>
     </div>
 
