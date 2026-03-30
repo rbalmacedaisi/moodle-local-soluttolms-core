@@ -168,14 +168,16 @@ if ($username_input !== '') {
             }
 
             // Qué roles tienen esta capability (ALLOW=1, PROHIBIT=-1000, ausente=vacío)
+            // NOTA: no hardcodear 'moodle/webservice:createtoken' en el SQL — el parser DML de
+            // Moodle interpreta ':createtoken' como parámetro nombrado y lanza mixedtypesqlparam.
             $cap_roles_analysis = $DB->get_records_sql(
                 "SELECT rc.roleid, r.shortname, r.name, rc.permission
                    FROM {role_capabilities} rc
                    JOIN {role} r ON r.id = rc.roleid
-                  WHERE rc.capability = 'moodle/webservice:createtoken'
+                  WHERE rc.capability = ?
                     AND rc.contextid  = ?
                ORDER BY rc.permission",
-                [$sysctx->id]
+                ['moodle/webservice:createtoken', $sysctx->id]
             );
             // Roles del usuario en contexto sistema
             $user_sysroles = $DB->get_records_sql(
