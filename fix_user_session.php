@@ -38,6 +38,9 @@ if ($username_input !== '') {
             if (!$user->policyagreed) {
                 $problems[] = 'policyagreed = false';
             }
+            if (empty($user->confirmed)) {
+                $problems[] = 'confirmed = 0 — token.php lanza moodle_exception("usernotconfirmed") y el login falla';
+            }
 
             $fix_result = null;
             if ($action === 'fix') {
@@ -59,12 +62,20 @@ if ($username_input !== '') {
                     $errs[] = 'Error actualizando policyagreed: ' . $e->getMessage();
                 }
 
+                try {
+                    $DB->set_field('user', 'confirmed', 1, ['id' => $user->id]);
+                    $fixes[] = '✓ confirmed establecido a 1';
+                } catch (Throwable $e) {
+                    $errs[] = 'Error actualizando confirmed: ' . $e->getMessage();
+                }
+
                 // Recargar datos después del fix
                 $sessions = $DB->get_records('sessions', ['userid' => $user->id]);
                 $user     = $DB->get_record('user', ['id' => $user->id], '*', IGNORE_MISSING);
                 $problems = [];
                 if (count($sessions) > 0) $problems[] = count($sessions) . ' sesión(es) activa(s) restantes';
                 if (!$user->policyagreed)  $problems[] = 'policyagreed sigue en false';
+                if (empty($user->confirmed)) $problems[] = 'confirmed sigue en 0';
 
                 $fix_result = ['fixes' => $fixes, 'errors' => $errs];
             }
@@ -144,6 +155,34 @@ if ($username_input !== '') {
                 $problems[] = 'Plugin de autenticación "' . $user->auth . '" no está habilitado';
             }
 
+            // 6. Capabilities críticas para web service token
+            $sysctx = context_system::instance();
+            $cap_createtoken = has_capability('moodle/webservice:createtoken', $sysctx, $user->id, false);
+            $cap_rest        = has_capability('webservice/rest:use',           $sysctx, $user->id, false);
+            if (!$cap_createtoken) {
+                $problems[] = 'Capability "moodle/webservice:createtoken" DENEGADA — external_generate_token_for_current_user lanzará excepción';
+            }
+            if (!$cap_rest) {
+                $problems[] = 'Capability "webservice/rest:use" DENEGADA — no puede usar el servicio REST';
+            }
+
+            // 7. Simular token generation para obtener el error exacto
+            $token_test = null;
+            try {
+                $svc_test = $DB->get_record('external_services', ['shortname' => 'moodle_mobile_app', 'enabled' => 1], '*', IGNORE_MISSING);
+                if ($svc_test) {
+                    \core\session\manager::set_user($user);
+                    $tok = external_generate_token_for_current_user($svc_test);
+                    $token_test = ['ok' => true, 'token_id' => $tok->id, 'token' => substr($tok->token, 0, 8) . '...'];
+                    \core\session\manager::set_user(\core\session\manager::get_realuser()); // restaurar
+                } else {
+                    $token_test = ['ok' => false, 'error' => 'Servicio moodle_mobile_app no encontrado o deshabilitado'];
+                }
+            } catch (Throwable $e) {
+                $token_test = ['ok' => false, 'error' => get_class($e) . ': ' . $e->getMessage()];
+                $problems[] = 'Generación de token falló: ' . $e->getMessage();
+            }
+
             // ── Acción fix: limpiar tokens vencidos + setear studentstatus ────────
             if ($action === 'fix') {
                 // Limpiar tokens expirados
@@ -206,6 +245,9 @@ if ($username_input !== '') {
                 'svc_access'        => $svc_access,
                 'roles'             => array_values($roles),
                 'auth_plugin_ok'    => $auth_plugin_ok,
+                'cap_createtoken'   => $cap_createtoken,
+                'cap_rest'          => $cap_rest,
+                'token_test'        => $token_test,
             ];
         }
     }
@@ -311,6 +353,11 @@ if ($username_input !== '') {
       <div class="field"><span class="field-label">policyagreed</span>
         <span class="badge <?= $u->policyagreed ? 'badge-ok' : 'badge-warn' ?>">
           <?= $u->policyagreed ? 'true' : 'false' ?>
+        </span>
+      </div>
+      <div class="field"><span class="field-label">confirmed</span>
+        <span class="badge <?= $u->confirmed ? 'badge-ok' : 'badge-err' ?>">
+          <?= $u->confirmed ? 'true' : 'false — token.php lanzará usernotconfirmed' ?>
         </span>
       </div>
       <div class="field"><span class="field-label">deleted / suspended</span>
@@ -461,6 +508,42 @@ if ($username_input !== '') {
         </table>
       <?php else: ?>
         <p style="font-size:.88rem;color:#c0392b;font-weight:600">Sin roles asignados — el campo <code>manager</code> será false en token.php.</p>
+      <?php endif; ?>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Capabilities para Web Service</div>
+      <div class="field">
+        <span class="field-label"><code>moodle/webservice:createtoken</code></span>
+        <span class="badge <?= $result['cap_createtoken'] ? 'badge-ok' : 'badge-err' ?>">
+          <?= $result['cap_createtoken'] ? 'PERMITIDA' : 'DENEGADA — causa excepción en token.php' ?>
+        </span>
+      </div>
+      <div class="field">
+        <span class="field-label"><code>webservice/rest:use</code></span>
+        <span class="badge <?= $result['cap_rest'] ? 'badge-ok' : 'badge-err' ?>">
+          <?= $result['cap_rest'] ? 'PERMITIDA' : 'DENEGADA' ?>
+        </span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Prueba de generación de token</div>
+      <?php $tt = $result['token_test']; ?>
+      <?php if ($tt === null): ?>
+        <p style="font-size:.88rem;color:#888">No ejecutada.</p>
+      <?php elseif ($tt['ok']): ?>
+        <div class="fix-box">
+          <strong>✅ Token generado correctamente</strong>
+          <div class="fix-item">ID: <?= (int)$tt['token_id'] ?> — Token: <code><?= htmlspecialchars($tt['token']) ?></code></div>
+          <div class="fix-item" style="color:#555;font-size:.82rem">Si este paso pasa pero el login en la LXP sigue fallando, el problema está en el cliente (token en localStorage corrupto o la redirección a Moodle falla).</div>
+        </div>
+      <?php else: ?>
+        <div class="warn-box">
+          <strong>⚠ Falló la generación de token</strong>
+          <div class="fix-item" style="color:#721c24;margin-top:6px"><code><?= htmlspecialchars($tt['error']) ?></code></div>
+          <div class="fix-item" style="margin-top:6px;font-size:.82rem">Este es el error exacto que ve el cliente al intentar autenticar.</div>
+        </div>
       <?php endif; ?>
     </div>
 
