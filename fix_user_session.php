@@ -409,7 +409,7 @@ if ($username_input !== '') {
       <div class="section-title">Servicio Web (<code>moodle_mobile_app</code>)</div>
       <div class="field">
         <span class="field-label">Acceso</span>
-        <span class="badge <?= str_starts_with($result['svc_access'], 'DENEGADO') || str_starts_with($result['svc_access'], 'Servicio') ? 'badge-err' : 'badge-ok' ?>">
+        <span class="badge <?= (strpos($result['svc_access'], 'DENEGADO') === 0 || strpos($result['svc_access'], 'Servicio') === 0) ? 'badge-err' : 'badge-ok' ?>">
           <?= htmlspecialchars($result['svc_access']) ?>
         </span>
       </div>
