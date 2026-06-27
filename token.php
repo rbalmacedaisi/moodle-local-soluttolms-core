@@ -151,13 +151,21 @@ if (!empty($user)) {
     // - Course creator.
     $ismanager = false;
 
-    $sql = "SELECT r.shortname
-              FROM {role_assignments} ra, {role} r
-             WHERE ra.userid = ? AND ra.roleid = r.id
-                    AND r.shortname IN ('teacher', 'manager', 'editingteacher', 'coursecreator')";
+    // Use record_exists_sql instead of get_records_sql here. The previous query
+    // selected only r.shortname, which get_records_sql uses as the array key.
+    // For a user with several role assignments sharing the same shortname (e.g.
+    // a teacher enrolled in multiple courses) that key is not unique, so Moodle
+    // emitted a "Did you remember to make the first column something unique"
+    // debugging() warning for every duplicate. Under debugdisplay, that output
+    // was injected into the response and corrupted the JSON (empty body /
+    // missing usertoken), breaking login for multi-course teachers.
+    $sql = "SELECT 1
+              FROM {role_assignments} ra
+              JOIN {role} r ON r.id = ra.roleid
+             WHERE ra.userid = ?
+               AND r.shortname IN ('teacher', 'manager', 'editingteacher', 'coursecreator')";
 
-    $userroles = $DB->get_records_sql($sql , array($user->id));
-    if(!empty($userroles)){
+    if ($DB->record_exists_sql($sql, array($user->id))) {
         $ismanager = true;
     }
 
